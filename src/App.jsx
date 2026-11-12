@@ -27,9 +27,9 @@ function App() {
     <div className="max-w-5xl mx-auto p-8 space-y-10">
       <header className="text-center">
         <h1 className="text-4xl font-serif mb-2 flex justify-center items-center gap-3">
-          <span className="text-orange-500 text-5xl" aria-hidden="true">✴</span> The Anatomy of a Master Prompt
+          <span className="text-orange-500 text-5xl" aria-hidden="true">✴</span> Prompt Craftsman
         </h1>
-        <p className="text-gray-400">Ubah ide singkat menjadi instruksi terstruktur untuk AI</p>
+        <p className="text-gray-400">Tempa ide singkat menjadi Master Prompt terstruktur 6 lapisan Claude</p>
       </header>
 
       <PromptInput
