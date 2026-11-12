@@ -7,13 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#232220',
-        panel: '#2D2C2A',
-        'panel-hover': '#353432',
-        input: '#1A1918',
+        background: '#0B0B0D',
       },
       fontFamily: {
-        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace'],
       },
     },
   },

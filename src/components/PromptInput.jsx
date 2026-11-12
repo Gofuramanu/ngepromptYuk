@@ -1,18 +1,40 @@
+import { useLayoutEffect, useRef } from 'react';
+import Icon from './Icon';
+
 export default function PromptInput({ value, onChange, onGenerate, onCancel, isGenerating, error }) {
+  const textareaRef = useRef(null);
+
+  // Auto-grow tinggi input utama agar tidak pernah memunculkan scrollbar kuno
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 116)}px`;
+  }, [value]);
+
   const handleKeyDown = (e) => {
     // Ctrl/Cmd + Enter untuk generate cepat.
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isGenerating) onGenerate();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isGenerating && value.trim()) onGenerate();
   };
 
   return (
-    <div className="bg-panel p-6 rounded-lg border border-gray-700 shadow-md">
-      <label htmlFor="short-prompt" className="block text-sm font-semibold text-gray-300 mb-2">
-        💡 Ide / Prompt Singkat
+    <section className="glass-card relative overflow-hidden p-6 sm:p-8">
+      {/* Glow oranye halus di sisi kanan atas sesuai desain HiFi */}
+      <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-orange-500/[0.08] blur-3xl" />
+
+      <label htmlFor="short-prompt" className="relative mb-5 flex items-center gap-3">
+        <span className="grid size-8 place-items-center rounded-lg bg-orange-500/15 text-orange-400 ring-1 ring-orange-400/25">
+          <Icon name="bulb" className="size-4" />
+        </span>
+        <span className="text-base font-semibold text-white sm:text-lg">Ide / Prompt Singkat</span>
       </label>
+
       <textarea
+        ref={textareaRef}
         id="short-prompt"
-        className="w-full bg-input text-white p-4 rounded-md outline-none focus:ring-2 focus:ring-orange-500 min-h-[100px]"
-        placeholder="Ketik permintaan sederhana Anda di sini... (Contoh: Buatkan saya rencana bisnis untuk jualan alat olahraga di Yogyakarta)"
+        spellCheck={false}
+        className="no-scrollbar relative min-h-[116px] w-full resize-none overflow-hidden rounded-2xl border border-white/[0.05] bg-[#09090b]/80 px-5 py-4 text-sm leading-relaxed text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-orange-500/40 focus:ring-4 focus:ring-orange-500/10 sm:text-base"
+        placeholder="Ketik permintaan sederhana Anda di sini... (Contoh: Buat rencana bisnis untuk jualan alat olahraga di Yogyakarta)"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -20,31 +42,44 @@ export default function PromptInput({ value, onChange, onGenerate, onCancel, isG
       />
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-400 bg-red-950/40 border border-red-800 rounded-md px-3 py-2">
+        <p
+          role="alert"
+          className="relative mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+        >
           {error}
         </p>
       )}
 
-      <div className="mt-4 flex justify-end gap-3">
+      <div className="relative mt-6 flex flex-wrap items-center justify-end gap-3">
         {isGenerating && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-md text-gray-300 border border-gray-600 hover:bg-gray-700 transition"
+            className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-white/[0.06]"
           >
             Batal
           </button>
         )}
+
         <button
           type="button"
           onClick={onGenerate}
-          disabled={isGenerating || !value.trim()}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-md font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isGenerating}
+          className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_30px_-6px_rgba(249,115,22,0.65)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isGenerating ? 'AI Sedang Menganalisis...' : 'Generate Master Prompt'}
+          {isGenerating ? (
+            <>
+              <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              AI Sedang Meracik...
+            </>
+          ) : (
+            <>
+              Generate Master Prompt
+              <Icon name="wand" className="size-4" />
+            </>
+          )}
         </button>
       </div>
-    </div>
+    </section>
   );
 }
-
