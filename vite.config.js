@@ -43,8 +43,8 @@ function localApiPlugin() {
             signal: AbortSignal.timeout(45_000),
             body: JSON.stringify({
               model,
+              stream: false,
               temperature: 0.7,
-              response_format: { type: 'json_object' },
               messages: [
                 { role: 'system', content: SYSTEM_INSTRUCTION },
                 { role: 'user', content: shortPrompt },

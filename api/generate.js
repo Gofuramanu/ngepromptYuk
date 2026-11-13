@@ -21,6 +21,47 @@ Rules:
 - Each field is plain text (newlines allowed), no markdown headings.
 - Respond ONLY with a valid JSON object containing exact keys: "role", "task", "context", "reasoning", "stop", "output".`;
 
+function extractContent(rawText) {
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    // Jika 9Router mengembalikan format SSE (data: {...}), gabungkan seluruh delta.content
+    if (rawText.includes('data:')) {
+      const assembled = rawText
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('data:') && !line.includes('[DONE]'))
+        .map((line) => {
+          try {
+            const chunk = JSON.parse(line.slice(5).trim());
+            return chunk?.choices?.[0]?.delta?.content ?? chunk?.choices?.[0]?.message?.content ?? '';
+          } catch {
+            return '';
+          }
+        })
+        .join('');
+      if (assembled.trim()) return { content: assembled, data: null };
+    }
+    return { content: '', data: null };
+  }
+
+  const msgContent = data?.choices?.[0]?.message?.content;
+  if (typeof msgContent === 'string' && msgContent.trim()) {
+    return { content: msgContent, data };
+  }
+  if (Array.isArray(msgContent)) {
+    const joined = msgContent.map((p) => (typeof p === 'string' ? p : p?.text ?? '')).join('');
+    if (joined.trim()) return { content: joined, data };
+  }
+
+  const textFallback =
+    data?.choices?.[0]?.text ??
+    data?.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? '').join('') ??
+    '';
+
+  return { content: typeof textFallback === 'string' ? textFallback : '', data };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -57,8 +98,8 @@ export default async function handler(req, res) {
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       body: JSON.stringify({
         model,
+        stream: false,
         temperature: 0.7,
-        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_INSTRUCTION },
           { role: 'user', content: shortPrompt },
@@ -66,16 +107,21 @@ export default async function handler(req, res) {
       }),
     });
 
-    const data = await upstream.json().catch(() => null);
+    const rawText = await upstream.text();
+    const { content, data } = extractContent(rawText);
 
     if (!upstream.ok) {
       const message = data?.error?.message || `9Router mengembalikan status ${upstream.status}.`;
       return res.status(upstream.status).json({ error: { message } });
     }
 
-    const content = data?.choices?.[0]?.message?.content;
     if (!content) {
-      return res.status(502).json({ error: { message: '9Router tidak mengembalikan konten dari model AI.' } });
+      const preview = rawText.replace(/\s+/g, ' ').slice(0, 140);
+      return res.status(502).json({
+        error: {
+          message: `9Router tidak mengembalikan konten (HTTP ${upstream.status}: ${preview || 'kosong'}).`,
+        },
+      });
     }
 
     return res.status(200).json({ content });
@@ -88,4 +134,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
