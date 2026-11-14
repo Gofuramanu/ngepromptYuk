@@ -6,20 +6,20 @@ function GoogleLogo() {
   return (
     <svg className="size-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
       <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.24 1.26-.96 2.33-2.04 3.05l3.3 2.56c1.92-1.77 3.04-4.38 3.04-7.46 0-.71-.06-1.4-.19-2.05H12z"
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
       />
       <path
         fill="#34A853"
-        d="M12 22c2.75 0 5.06-.91 6.75-2.47l-3.3-2.56c-.91.61-2.08.98-3.45.98-2.65 0-4.9-1.79-5.71-4.2H2.88v2.64A10 10 0 0 0 12 22z"
-      />
-      <path
-        fill="#4A90E2"
-        d="M6.29 13.75A6.02 6.02 0 0 1 5.97 12c0-.61.11-1.2.32-1.75V7.61H2.88A10 10 0 0 0 2 12c0 1.61.39 3.14 1.08 4.39l3.21-2.64z"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
       />
       <path
         fill="#FBBC05"
-        d="M12 5.98c1.5 0 2.84.52 3.9 1.53l2.92-2.92C17.05 2.94 14.75 2 12 2A10 10 0 0 0 2.88 7.61l3.41 2.64c.81-2.41 3.06-4.27 5.71-4.27z"
+        d="M5.28 14.27a7.22 7.22 0 0 1 0-4.54V6.58H1.25a12.003 12.003 0 0 0 0 10.84l4.03-3.15z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
       />
     </svg>
   );
@@ -61,23 +61,38 @@ function WarmLuminousAuthScreen({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [forgotNotice, setForgotNotice] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const validate = () => {
+    const errors = {};
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      errors.email = 'Email tidak boleh kosong.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      errors.email = 'Format email belum valid.';
+    }
+
+    if (!password) {
+      errors.password = 'Password tidak boleh kosong.';
+    } else if (password.length < 6) {
+      errors.password = 'Password minimal 6 karakter.';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setForgotNotice(false);
+    onClearError?.();
+
+    if (!validate()) return;
     await onSubmit(mode, email, password);
   };
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-center px-4 py-12">
-      {/* Ambient Warm Luminous Glow di belakang kartu */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 flex items-center justify-center"
-      >
-        <div className="h-[520px] w-[520px] rounded-full bg-[#dd7a53]/[0.16] blur-[140px]" />
-      </div>
-
       {/* Tombol kembali ke workspace di kanan atas */}
       <button
         type="button"
@@ -106,8 +121,19 @@ function WarmLuminousAuthScreen({
         </p>
       </div>
 
-      {/* Kartu Login Warm Luminous Dark */}
-      <div className="relative z-10 mt-8 w-full max-w-[404px] rounded-[24px] border border-white/[0.08] bg-[#161413]/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.75)] backdrop-blur-xl sm:p-7">
+      {/* Wrapper dengan Ambient Orange natural & gradasi multi-stop halus tepat di BELAKANG kartu login (-z-10) */}
+      <div className="relative isolate mt-8 w-full max-w-[404px]">
+        <div
+          aria-hidden="true"
+          style={{
+            background:
+              'radial-gradient(ellipse 60% 46% at 50% 52%, rgba(222, 124, 86, 0.42) 0%, rgba(208, 108, 70, 0.28) 24%, rgba(182, 86, 50, 0.16) 46%, rgba(145, 62, 34, 0.07) 68%, rgba(90, 36, 18, 0.02) 84%, rgba(0, 0, 0, 0) 100%)',
+          }}
+          className="animate-login-ambient pointer-events-none absolute -inset-x-64 -inset-y-24 -z-10 blur-[115px]"
+        />
+
+        {/* Kartu Login Solid (#141312 tanpa transparansi tembus) agar ambient tidak menimpa elemen di dalam kotak */}
+        <div className="relative z-10 w-full rounded-[24px] border border-white/[0.08] bg-[#141312] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.85)] sm:p-7">
         {/* Tombol OAuth Google & GitHub */}
         <div className="space-y-2.5">
           <button
@@ -141,14 +167,20 @@ function WarmLuminousAuthScreen({
         </div>
 
         {/* Form Email & Password */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label htmlFor="auth-email" className="block text-xs font-medium text-[#b5aea8]">
               Email
             </label>
-            <div className="mt-1.5 flex h-11 items-center gap-2.5 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3.5 transition focus-within:border-[#df7c55]/60 focus-within:ring-2 focus-within:ring-[#df7c55]/15">
+            <div
+              className={`mt-1.5 flex h-11 items-center gap-2.5 rounded-xl border bg-[#1b1917] px-3.5 transition ${
+                validationErrors.email
+                  ? 'border-rose-500/70 focus-within:border-rose-500 focus-within:ring-2 focus-within:ring-rose-500/20'
+                  : 'border-white/[0.08] focus-within:border-[#df7c55]/60 focus-within:ring-2 focus-within:ring-[#df7c55]/15'
+              }`}
+            >
               <svg
-                className="size-4 shrink-0 text-[#6d6661]"
+                className={`size-4 shrink-0 transition ${validationErrors.email ? 'text-rose-400' : 'text-[#6d6661]'}`}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -163,14 +195,24 @@ function WarmLuminousAuthScreen({
               <input
                 id="auth-email"
                 type="email"
-                required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (validationErrors.email) {
+                    setValidationErrors((prev) => ({ ...prev, email: undefined }));
+                  }
+                }}
                 placeholder="nama@email.com"
                 className="w-full bg-transparent text-xs text-[#f3efec] outline-none placeholder:text-[#5c5651] sm:text-[13px]"
               />
             </div>
+            {validationErrors.email && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-rose-400">
+                <span className="size-1 rounded-full bg-rose-400" />
+                {validationErrors.email}
+              </p>
+            )}
           </div>
 
           <div>
@@ -188,9 +230,15 @@ function WarmLuminousAuthScreen({
                 </button>
               )}
             </div>
-            <div className="mt-1.5 flex h-11 items-center gap-2.5 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3.5 transition focus-within:border-[#df7c55]/60 focus-within:ring-2 focus-within:ring-[#df7c55]/15">
+            <div
+              className={`mt-1.5 flex h-11 items-center gap-2.5 rounded-xl border bg-[#1b1917] px-3.5 transition ${
+                validationErrors.password
+                  ? 'border-rose-500/70 focus-within:border-rose-500 focus-within:ring-2 focus-within:ring-rose-500/20'
+                  : 'border-white/[0.08] focus-within:border-[#df7c55]/60 focus-within:ring-2 focus-within:ring-[#df7c55]/15'
+              }`}
+            >
               <svg
-                className="size-4 shrink-0 text-[#6d6661]"
+                className={`size-4 shrink-0 transition ${validationErrors.password ? 'text-rose-400' : 'text-[#6d6661]'}`}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -205,11 +253,14 @@ function WarmLuminousAuthScreen({
               <input
                 id="auth-password"
                 type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (validationErrors.password) {
+                    setValidationErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
                 placeholder="••••••••"
                 className="w-full bg-transparent text-xs text-[#f3efec] outline-none placeholder:text-[#5c5651] sm:text-[13px]"
               />
@@ -217,11 +268,17 @@ function WarmLuminousAuthScreen({
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="text-[#6d6661] transition hover:text-[#b5aea8]"
+                className={`transition ${showPassword ? 'text-[#de7c56] hover:text-[#e58863]' : 'text-[#6d6661] hover:text-[#b5aea8]'}`}
               >
-                <Icon name="eye" className="size-4" />
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="size-4" />
               </button>
             </div>
+            {validationErrors.password && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-rose-400">
+                <span className="size-1 rounded-full bg-rose-400" />
+                {validationErrors.password}
+              </p>
+            )}
           </div>
 
           {forgotNotice && !error && (
@@ -245,16 +302,17 @@ function WarmLuminousAuthScreen({
           </button>
         </form>
 
-        {/* Kotak Informasi BYOK sesuai desain */}
-        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-[#de7c56]/15 bg-[#201b18]/90 p-4">
-          <ShieldIcon />
-          <div>
-            <p className="text-xs font-semibold text-[#f3efec]">
-              Personal AI Connection (BYOK):
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#8e8781]">
-              Your API keys are encrypted with AES-256-GCM and stored securely. We never expose keys to the browser environment.
-            </p>
+          {/* Kotak Informasi BYOK sesuai desain */}
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-[#de7c56]/15 bg-[#201b18] p-4">
+            <ShieldIcon />
+            <div>
+              <p className="text-xs font-semibold text-[#f3efec]">
+                Personal AI Connection (BYOK):
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-[#8e8781]">
+                Your API keys are encrypted with AES-256-GCM and stored securely. We never expose keys to the browser environment.
+              </p>
+            </div>
           </div>
         </div>
       </div>
