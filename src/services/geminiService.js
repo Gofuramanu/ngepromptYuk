@@ -1,8 +1,9 @@
 import { parseAnatomy, parseLayerContent } from '../utils/parseAnatomy';
+import { getSessionToken } from './accountService';
 
 // Endpoint internal serverless (/api/generate).
-// Di production ditangani oleh api/generate.js -> 9Router -> Gemini.
-// Frontend tidak pernah memegang API Key atau system prompt.
+// Jika user login & memiliki koneksi AI (BYOK) aktif, backend otomatis memakai kredensial milik user.
+// Jika belum login / belum menautkan BYOK, backend memakai fallback gratis bawaan aplikasi.
 const ENDPOINT = '/api/generate';
 const REQUEST_TIMEOUT_MS = 45_000;
 
@@ -17,10 +18,10 @@ export class ApiError extends Error {
 function messageForStatus(status, detail) {
   const suffix = detail ? ` (${detail})` : '';
   if (status === 400) return `Permintaan tidak valid (400)${suffix}.`;
-  if (status === 401 || status === 403) return `Autentikasi server/9Router ditolak${suffix}.`;
+  if (status === 401 || status === 403) return `Autentikasi provider AI ditolak${suffix}.`;
   if (status === 404) return `Endpoint atau model tidak ditemukan${suffix}.`;
   if (status === 429) return 'Batas kuota / rate limit tercapai. Silakan coba beberapa saat lagi.';
-  if (status >= 500) return `Server gateway sedang bermasalah${suffix}. Coba lagi beberapa saat.`;
+  if (status >= 500) return `Server / provider AI sedang bermasalah${suffix}. Coba lagi beberapa saat.`;
   return `Terjadi kesalahan tak terduga (HTTP ${status})${suffix}.`;
 }
 
@@ -28,11 +29,17 @@ async function requestGeneration(payload, { signal } = {}) {
   const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getSessionToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   let res;
   try {
     res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       signal: combinedSignal,
       body: JSON.stringify(payload),
     });

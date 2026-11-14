@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import AccountModal from './components/AccountModal';
 import AnatomyBlock from './components/AnatomyBlock';
 import FloatingActionBar from './components/FloatingActionBar';
 import MasterPromptModal from './components/MasterPromptModal';
@@ -7,6 +8,7 @@ import PromptInput from './components/PromptInput';
 import { ANATOMY_LAYERS, EMPTY_PROMPT_DATA, LAYER_KEYS, STORAGE_KEY } from './constants/anatomy';
 import { usePersistentState } from './hooks/usePersistentState';
 import { usePromptGenerator } from './hooks/usePromptGenerator';
+import { useUserAccount } from './hooks/useUserAccount';
 import { buildMasterPrompt } from './utils/buildMasterPrompt';
 import { applyVariables } from './utils/promptVariables';
 
@@ -22,7 +24,23 @@ function App() {
     layerError,
     clearLayerError,
   } = usePromptGenerator();
+  const {
+    user,
+    connection,
+    prompts,
+    isAccountBusy,
+    accountError,
+    authenticate,
+    signOut,
+    saveConnection,
+    removeConnection,
+    savePrompt,
+    removePrompt,
+    clearAccountError,
+  } = useUserAccount();
+
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
 
   // State interaksi kartu:
   // - activeLayer: key kartu yang sedang di-expand secara individual saat diklik di barisan Linear
@@ -129,6 +147,20 @@ function App() {
     }
   };
 
+  // Memuat prompt dari Workspace akun user ke editor
+  const handleLoadSavedPrompt = useCallback(
+    (item) => {
+      setActiveLayer(null);
+      setData({
+        shortPrompt: item.shortPrompt || '',
+        ...Object.fromEntries(LAYER_KEYS.map((k) => [k, item.layers?.[k] || ''])),
+        variables: item.variables || {},
+      });
+      setAccountModalOpen(false);
+    },
+    [setData]
+  );
+
   const closePreview = useCallback(() => setPreviewOpen(false), []);
   const masterPrompt = useMemo(() => buildMasterPrompt(data), [data]);
   const isAnyGenerating = isGenerating || Boolean(regeneratingLayer);
@@ -141,7 +173,14 @@ function App() {
         <div className="absolute -right-48 top-1/4 h-[650px] w-[550px] rounded-full bg-orange-600/[0.08] blur-[160px]" />
       </div>
 
-      <Navbar />
+      <Navbar
+        user={user}
+        connection={connection}
+        onOpenAccount={() => {
+          clearAccountError();
+          setAccountModalOpen(true);
+        }}
+      />
 
       <main className="mx-auto max-w-[1120px] space-y-8 px-4 pb-16 pt-6 sm:px-6">
         <PromptInput
@@ -214,6 +253,25 @@ function App() {
       </main>
 
       <MasterPromptModal open={previewOpen} masterPrompt={masterPrompt} onClose={closePreview} />
+
+      <AccountModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        user={user}
+        connection={connection}
+        prompts={prompts}
+        currentData={data}
+        isBusy={isAccountBusy}
+        error={accountError}
+        onAuthenticate={authenticate}
+        onSignOut={signOut}
+        onSaveConnection={saveConnection}
+        onRemoveConnection={removeConnection}
+        onSavePrompt={savePrompt}
+        onDeletePrompt={removePrompt}
+        onLoadPrompt={handleLoadSavedPrompt}
+        onClearError={clearAccountError}
+      />
     </div>
   );
 }

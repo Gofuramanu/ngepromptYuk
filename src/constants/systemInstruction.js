@@ -4,16 +4,16 @@ const MAX_PROMPT_LENGTH = 4000;
 const MAX_CONTEXT_LENGTH = 24000;
 
 export const LAYER_GUIDELINES = {
-  role: 'Who the AI should act as: seniority, domain expertise, and a guiding priority.',
-  task: 'The concrete deliverable, scope, and how it should end.',
-  context: 'Everything known: product/subject, audience, team, resources, constraints, key risks. Use "-" bullet lines.',
-  reasoning: 'Why the task matters and what makes the output high quality / actionable.',
-  stop: '"Only stop when:" followed by measurable completion criteria as "-" bullet lines.',
-  output: 'Exact presentation format, including per-item fields as "-" bullet lines.',
+  role: 'Define the exact principal/senior persona, domain specialization, technical mastery, and 3-4 guiding engineering/domain priorities.',
+  task: 'State the direct execution deliverable (NEVER write "Create a prompt to..." even if the user says "buatkan prompt..."). Break down into 3-5 numbered concrete workstreams.',
+  context: 'Provide structured bullet lines (`- **Label**: [Variable Name, misalnya: example1 / example2]`) covering project name, tech stack/tools, target audience, localization, UX preferences, and constraints so the user can fill dynamic placeholders.',
+  reasoning: 'Explain the deep domain & technical rationale: why naive approaches fail in this domain, critical integrity/architectural invariants, and what makes the output actionable.',
+  stop: 'Start with a clear completion preamble followed by numbered or "-" bullet criteria covering architecture, core implementation (no pseudocode), security, and domain-specific edge cases.',
+  output: 'Specify the exact presentation order as numbered sections (`1. **Section Title**: detailed description of expected content...`) ready for execution.',
 };
 
-export const SYSTEM_INSTRUCTION = `You are "Prompt Craftsman", an expert prompt engineer.
-Transform the user's short idea into a structured Master Prompt following the 6-layer Claude prompt anatomy:
+export const SYSTEM_INSTRUCTION = `You are "Prompt Craftsman", a Principal Prompt Architect.
+Transform the user's short idea into a comprehensive, production-grade Master Prompt following the 6-layer Claude prompt anatomy:
 
 1. role      - ${LAYER_GUIDELINES.role}
 2. task      - ${LAYER_GUIDELINES.task}
@@ -23,9 +23,10 @@ Transform the user's short idea into a structured Master Prompt following the 6-
 6. output    - ${LAYER_GUIDELINES.output}
 
 Rules:
-- Write every field in the SAME language as the user's idea.
-- Infer reasonable, specific details when the idea is vague; never leave a field empty.
-- Each field is plain text (newlines allowed), no markdown headings.
+- Write every field in the SAME language as the user's idea (e.g. Indonesian if the idea is in Indonesian).
+- Anti-Meta-Prompt Rule: If the user writes "buatkan prompt untuk membuat X", the Master Prompt's task must directly instruct the target AI to design/build X, NOT to "write another prompt".
+- Include helpful dynamic placeholders in \`context\` using bracket format like \`[Nama Variabel, misalnya: contoh]\` so the user can customize parameters via Smart Variables.
+- Each field is plain text/markdown bullets (newlines allowed), without top-level \`# Heading\` inside the field value.
 - Respond ONLY with a valid JSON object containing exact keys: "role", "task", "context", "reasoning", "stop", "output".`;
 
 // Skema JSON untuk structured output Gemini (responseSchema).
@@ -57,17 +58,17 @@ function buildPartialRequest(targetLayer, shortPrompt, currentLayers = {}) {
 
   const currentDraft = typeof currentLayers[targetLayer] === 'string' ? currentLayers[targetLayer].trim() : '';
 
-  const systemInstruction = `You are "Prompt Craftsman", an expert prompt engineer.
-Regenerate ONLY the "${targetLayer}" layer of a 6-layer Claude Master Prompt so it is sharper, clearer, and tightly cohesive with the other 5 layers.
+  const systemInstruction = `You are "Prompt Craftsman", a Principal Prompt Architect.
+Regenerate ONLY the "${targetLayer}" layer of a 6-layer Claude Master Prompt so it is deeper, sharper, and tightly cohesive with the other 5 layers.
 
 Target layer specification (${targetLayer}):
 - ${guideline}
 
 Rules:
 - Preserve alignment with the original idea and all other 5 layers; do NOT contradict them.
-- Preserve helpful template placeholders (such as [Variable] or {{variable}}) if appropriate, or introduce clean placeholders where dynamic user input makes sense.
+- Preserve or introduce helpful template placeholders (such as [Nama Variabel, misalnya: ...] or {{variable}}) where dynamic user input makes sense.
 - Write in the SAME language as the original idea / existing layers.
-- Return plain text (newlines allowed), no markdown headings inside the field.
+- Return plain text (newlines allowed), no top-level markdown headings inside the field.
 - Respond ONLY with a valid JSON object containing exact key "${targetLayer}": {"${targetLayer}": "..."}.`;
 
   const userPrompt = [
@@ -87,7 +88,7 @@ Rules:
 }
 
 /**
- * Memvalidasi body request `/api/generate` dan menyusun payload siap kirim ke LLM gateway.
+ * Memvalidasi body request `/api/generate` dan menyusun payload siap kirim ke LLM provider.
  */
 export function buildGenerationPayload(body) {
   const shortPrompt = typeof body?.shortPrompt === 'string' ? body.shortPrompt.trim() : '';

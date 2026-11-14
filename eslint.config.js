@@ -20,7 +20,7 @@ export default defineConfig([
   },
   {
     // File konfigurasi & serverless functions berjalan di Node, bukan browser.
-    files: ['*.config.js', 'api/**/*.js'],
+    files: ['*.config.js', 'api/**/*.js', 'src/server/**/*.js'],
     languageOptions: { globals: globals.node },
   },
 ])
