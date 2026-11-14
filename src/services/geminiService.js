@@ -1,4 +1,4 @@
-import { parseAnatomy } from '../utils/parseAnatomy';
+import { parseAnatomy, parseLayerContent } from '../utils/parseAnatomy';
 
 // Endpoint internal serverless (/api/generate).
 // Di production ditangani oleh api/generate.js -> 9Router -> Gemini.
@@ -24,7 +24,7 @@ function messageForStatus(status, detail) {
   return `Terjadi kesalahan tak terduga (HTTP ${status})${suffix}.`;
 }
 
-export async function generateAnatomy(shortPrompt, { signal } = {}) {
+async function requestGeneration(payload, { signal } = {}) {
   const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 
@@ -34,7 +34,7 @@ export async function generateAnatomy(shortPrompt, { signal } = {}) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: combinedSignal,
-      body: JSON.stringify({ shortPrompt }),
+      body: JSON.stringify(payload),
     });
   } catch (err) {
     if (err.name === 'AbortError') throw err; // dibatalkan oleh user/unmount
@@ -54,5 +54,18 @@ export async function generateAnatomy(shortPrompt, { signal } = {}) {
     throw new ApiError('AI tidak mengembalikan konten. Coba ubah ide prompt Anda.', 422);
   }
 
+  return content;
+}
+
+export async function generateAnatomy(shortPrompt, { signal } = {}) {
+  const content = await requestGeneration({ shortPrompt }, { signal });
   return parseAnatomy(content);
+}
+
+export async function regenerateLayer(targetLayer, shortPrompt, currentLayers, { signal } = {}) {
+  const content = await requestGeneration(
+    { targetLayer, shortPrompt, currentLayers },
+    { signal }
+  );
+  return parseLayerContent(content, targetLayer);
 }

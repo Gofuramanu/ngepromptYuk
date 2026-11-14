@@ -1,7 +1,7 @@
 import dns from 'node:dns'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
-import { RESPONSE_SCHEMA, SYSTEM_INSTRUCTION } from './src/constants/systemInstruction.js'
+import { buildGenerationPayload } from './src/constants/systemInstruction.js'
 
 // Hindari delay/gagal koneksi IPv6 di Node.js pada Windows saat menghubungi API
 dns.setDefaultResultOrder('ipv4first')
@@ -21,11 +21,11 @@ function localApiPlugin() {
     req.on('end', async () => {
       try {
         const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
-        const shortPrompt = typeof parsed.shortPrompt === 'string' ? parsed.shortPrompt.trim() : ''
-        if (!shortPrompt) {
-          res.statusCode = 400
+        const payload = buildGenerationPayload(parsed)
+        if (payload.error) {
+          res.statusCode = payload.error.status
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: { message: 'Ide prompt tidak boleh kosong.' } }))
+          res.end(JSON.stringify({ error: { message: payload.error.message } }))
           return
         }
 
@@ -46,8 +46,8 @@ function localApiPlugin() {
               stream: false,
               temperature: 0.7,
               messages: [
-                { role: 'system', content: SYSTEM_INSTRUCTION },
-                { role: 'user', content: shortPrompt },
+                { role: 'system', content: payload.systemInstruction },
+                { role: 'user', content: payload.userPrompt },
               ],
             }),
           })
@@ -79,12 +79,12 @@ function localApiPlugin() {
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
             signal: AbortSignal.timeout(30_000),
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-              contents: [{ role: 'user', parts: [{ text: shortPrompt }] }],
+              systemInstruction: { parts: [{ text: payload.systemInstruction }] },
+              contents: [{ role: 'user', parts: [{ text: payload.userPrompt }] }],
               generationConfig: {
                 temperature: 0.7,
                 responseMimeType: 'application/json',
-                responseSchema: RESPONSE_SCHEMA,
+                responseSchema: payload.responseSchema,
               },
             }),
           }

@@ -92,6 +92,7 @@ export const LAYER_KEYS = ANATOMY_LAYERS.map((layer) => layer.key);
 export const EMPTY_PROMPT_DATA = {
   shortPrompt: '',
   ...Object.fromEntries(LAYER_KEYS.map((key) => [key, ''])),
+  variables: {},
 };
 
 export const STORAGE_KEY = 'promptArchitectData';

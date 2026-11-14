@@ -8,10 +8,20 @@ import { ANATOMY_LAYERS, EMPTY_PROMPT_DATA, LAYER_KEYS, STORAGE_KEY } from './co
 import { usePersistentState } from './hooks/usePersistentState';
 import { usePromptGenerator } from './hooks/usePromptGenerator';
 import { buildMasterPrompt } from './utils/buildMasterPrompt';
+import { applyVariables } from './utils/promptVariables';
 
 function App() {
   const [data, setData] = usePersistentState(STORAGE_KEY, EMPTY_PROMPT_DATA);
-  const { generate, cancel, isGenerating, error } = usePromptGenerator();
+  const {
+    generate,
+    regenerateSingleLayer,
+    cancel,
+    isGenerating,
+    regeneratingLayer,
+    error,
+    layerError,
+    clearLayerError,
+  } = usePromptGenerator();
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // State interaksi kartu:
@@ -21,7 +31,37 @@ function App() {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Functional update: selalu memakai state terbaru (menghindari stale closure).
-  const updateField = (field, value) => setData((prev) => ({ ...prev, [field]: value }));
+  const updateField = useCallback(
+    (field, value) => setData((prev) => ({ ...prev, [field]: value })),
+    [setData]
+  );
+
+  const variables = useMemo(() => data.variables || {}, [data.variables]);
+
+  // Memperbarui nilai variabel dinamis tanpa menimpa placeholder di teks mentah blok
+  const updateVariable = useCallback(
+    (name, value) => {
+      setData((prev) => ({
+        ...prev,
+        variables: {
+          ...(prev.variables || {}),
+          [name]: value,
+        },
+      }));
+    },
+    [setData]
+  );
+
+  // Opsional: membekukan nilai variabel yang sudah diisi ke dalam teks mentah blok
+  const handleApplyVariablesToLayer = useCallback(
+    (layerKey) => {
+      setData((prev) => ({
+        ...prev,
+        [layerKey]: applyVariables(prev[layerKey], prev.variables || {}),
+      }));
+    },
+    [setData]
+  );
 
   // Mode Expanded 2 Kolom hanya aktif otomatis ketika ke-6 lapisan Master Prompt sudah terisi lengkap
   const allLayersGenerated = useMemo(
@@ -37,9 +77,9 @@ function App() {
   // Selama belum semua 6 lapisan ter-generate, tampilkan barisan 6 kartu Linear (dengan expand per-kartu)
   const isCompactMode = !allLayersGenerated;
 
-  const handleSelectLayer = (layerKey) => {
+  const handleSelectLayer = useCallback((layerKey) => {
     setActiveLayer((prev) => (prev === layerKey ? null : layerKey));
-  };
+  }, []);
 
   const handleGenerate = async () => {
     const idea = data.shortPrompt.trim();
@@ -53,14 +93,26 @@ function App() {
       if (isCompactMode) {
         setIsTransitioning(true);
         setTimeout(() => {
-          setData((prev) => ({ ...prev, ...layers }));
+          setData((prev) => ({ ...prev, ...layers, variables: {} }));
           setIsTransitioning(false);
         }, 220);
       } else {
-        setData((prev) => ({ ...prev, ...layers }));
+        setData((prev) => ({ ...prev, ...layers, variables: {} }));
       }
     }
   };
+
+  // Regenerasi 1 blok anatomi sambil mengirim shortPrompt & 5 blok lainnya sebagai konteks
+  const handleRegenerateLayer = useCallback(
+    async (layerKey) => {
+      const currentLayers = Object.fromEntries(LAYER_KEYS.map((key) => [key, data[key] || '']));
+      const nextContent = await regenerateSingleLayer(layerKey, data.shortPrompt, currentLayers);
+      if (nextContent !== null) {
+        setData((prev) => ({ ...prev, [layerKey]: nextContent }));
+      }
+    },
+    [data, regenerateSingleLayer, setData]
+  );
 
   // Saat tombol Reset diklik: tutup dengan animasi halus lalu kembali ke barisan Linear
   const handleResetAll = () => {
@@ -79,6 +131,7 @@ function App() {
 
   const closePreview = useCallback(() => setPreviewOpen(false), []);
   const masterPrompt = useMemo(() => buildMasterPrompt(data), [data]);
+  const isAnyGenerating = isGenerating || Boolean(regeneratingLayer);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -101,7 +154,7 @@ function App() {
         />
 
         {/* Section Prompt Anatomy */}
-        <section className="space-y-5" aria-busy={isGenerating}>
+        <section className="space-y-5" aria-busy={isAnyGenerating}>
           <div className="flex flex-wrap items-end justify-between gap-4 px-1">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
@@ -137,7 +190,16 @@ function App() {
                 layer={layer}
                 value={data[layer.key]}
                 onChange={updateField}
+                variables={variables}
+                onVariableChange={updateVariable}
+                onApplyVariables={handleApplyVariablesToLayer}
+                onRegenerate={handleRegenerateLayer}
                 isLoading={isGenerating}
+                isRegenerating={regeneratingLayer === layer.key}
+                isAnyGenerating={isAnyGenerating}
+                canRegenerate={hasAnyInput}
+                layerError={layerError?.layer === layer.key ? layerError.message : null}
+                onDismissError={clearLayerError}
                 isCompact={isCompactMode}
                 isExiting={isTransitioning}
                 isActive={activeLayer === layer.key}

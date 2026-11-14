@@ -1,25 +1,10 @@
 // Vercel Serverless Function: POST /api/generate
 // Menjembatani frontend ke 9Router AI API Gateway secara aman (Zero Client Leak).
-// Manajemen kuota, antrean, rate limit (429), dan fallback model ditangani terpusat oleh 9Router.
+// Mendukung generasi penuh (6 lapisan) maupun regenerasi parsial per blok.
 
-const MAX_PROMPT_LENGTH = 4000;
+import { buildGenerationPayload } from '../src/constants/systemInstruction.js';
+
 const UPSTREAM_TIMEOUT_MS = 45_000;
-
-const SYSTEM_INSTRUCTION = `You are "Prompt Craftsman", an expert prompt engineer.
-Transform the user's short idea into a structured Master Prompt following the 6-layer Claude prompt anatomy:
-
-1. role      - Who the AI should act as: seniority, domain expertise, and a guiding priority.
-2. task      - The concrete deliverable, scope, and how it should end.
-3. context   - Everything known: product/subject, audience, team, resources, constraints, key risks. Use "-" bullet lines.
-4. reasoning - Why the task matters and what makes the output high quality / actionable.
-5. stop      - "Only stop when:" followed by measurable completion criteria as "-" bullet lines.
-6. output    - Exact presentation format, including per-item fields as "-" bullet lines.
-
-Rules:
-- Write every field in the SAME language as the user's idea.
-- Infer reasonable, specific details when the idea is vague; never leave a field empty.
-- Each field is plain text (newlines allowed), no markdown headings.
-- Respond ONLY with a valid JSON object containing exact keys: "role", "task", "context", "reasoning", "stop", "output".`;
 
 function extractContent(rawText) {
   let data;
@@ -78,14 +63,9 @@ export default async function handler(req, res) {
     });
   }
 
-  const shortPrompt = typeof req.body?.shortPrompt === 'string' ? req.body.shortPrompt.trim() : '';
-  if (!shortPrompt) {
-    return res.status(400).json({ error: { message: 'Ide prompt tidak boleh kosong.' } });
-  }
-  if (shortPrompt.length > MAX_PROMPT_LENGTH) {
-    return res.status(400).json({
-      error: { message: `Ide prompt melebihi batas maksimal ${MAX_PROMPT_LENGTH} karakter.` },
-    });
+  const payload = buildGenerationPayload(req.body);
+  if (payload.error) {
+    return res.status(payload.error.status).json({ error: { message: payload.error.message } });
   }
 
   try {
@@ -101,8 +81,8 @@ export default async function handler(req, res) {
         stream: false,
         temperature: 0.7,
         messages: [
-          { role: 'system', content: SYSTEM_INSTRUCTION },
-          { role: 'user', content: shortPrompt },
+          { role: 'system', content: payload.systemInstruction },
+          { role: 'user', content: payload.userPrompt },
         ],
       }),
     });
