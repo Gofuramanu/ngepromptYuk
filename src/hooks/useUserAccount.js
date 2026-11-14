@@ -4,6 +4,7 @@ import {
   deletePromptFromWorkspace,
   deleteUserAiConnection,
   fetchCurrentSession,
+  getOAuthAuthorizeUrl,
   getSessionToken,
   savePromptToWorkspace,
   saveUserAiConnection,
@@ -19,6 +20,16 @@ export function useUserAccount() {
   const [accountError, setAccountError] = useState(null);
 
   useEffect(() => {
+    // Tangkap access_token dari URL hash jika kembali dari redirect OAuth (Google / GitHub)
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      const hashToken = params.get('access_token');
+      if (hashToken) {
+        setSessionToken(hashToken);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+
     const token = getSessionToken();
     if (!token) return;
 
@@ -128,6 +139,21 @@ export function useUserAccount() {
     }
   }, []);
 
+  const startOAuth = useCallback(async (provider) => {
+    setIsAccountBusy(true);
+    setAccountError(null);
+    try {
+      const url = await getOAuthAuthorizeUrl(provider);
+      if (url && typeof window !== 'undefined') {
+        window.location.assign(url);
+      }
+    } catch (err) {
+      setAccountError(err.message);
+    } finally {
+      setIsAccountBusy(false);
+    }
+  }, []);
+
   const clearAccountError = useCallback(() => setAccountError(null), []);
 
   return {
@@ -137,6 +163,7 @@ export function useUserAccount() {
     isAccountBusy,
     accountError,
     authenticate,
+    startOAuth,
     signOut,
     saveConnection,
     removeConnection,

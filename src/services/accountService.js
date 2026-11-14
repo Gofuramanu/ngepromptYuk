@@ -103,6 +103,12 @@ export async function authenticateAccount(mode, email, password) {
   return data;
 }
 
+export async function getOAuthAuthorizeUrl(provider) {
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin : '';
+  const data = await callAccountApi({ action: 'oauth_url', provider, redirectTo });
+  return data?.url || '';
+}
+
 export async function fetchCurrentSession() {
   const token = getSessionToken();
   if (!token) return null;

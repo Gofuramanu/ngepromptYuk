@@ -16,6 +16,26 @@ import {
 export async function handleAccountAction(body, token, env = process.env) {
   const action = typeof body?.action === 'string' ? body.action.trim() : '';
 
+  if (action === 'oauth_url') {
+    const provider = body?.provider === 'github' ? 'github' : 'google';
+    const supaUrl = (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+    const redirectTo = typeof body?.redirectTo === 'string' ? body.redirectTo.trim() : '';
+    if (!supaUrl) {
+      return {
+        status: 400,
+        data: {
+          error: {
+            message: `Untuk memakai Continue with ${provider === 'google' ? 'Google' : 'GitHub'}, silakan isi SUPABASE_URL di Environment Variables atau masuk menggunakan Email & Password di bawah.`,
+          },
+        },
+      };
+    }
+    const url = `${supaUrl}/auth/v1/authorize?provider=${provider}${
+      redirectTo ? `&redirect_to=${encodeURIComponent(redirectTo)}` : ''
+    }`;
+    return { status: 200, data: { url } };
+  }
+
   if (action === 'signup' || action === 'login') {
     const authResult = await authenticateUser(
       { mode: action, email: body?.email, password: body?.password },

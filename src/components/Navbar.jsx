@@ -64,9 +64,9 @@ export default function Navbar({ user, connection, onOpenAccount }) {
           <button
             type="button"
             onClick={onOpenAccount}
-            className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white transition hover:border-orange-500/40 hover:bg-white/[0.08] sm:px-5 sm:text-sm"
+            className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-xs font-semibold text-white transition hover:border-orange-500/40 hover:bg-white/[0.08] sm:text-sm"
           >
-            {user ? user.email.split('@')[0] : 'Sign In / BYOK'}
+            {user ? user.email.split('@')[0] : 'Sign In'}
           </button>
         </div>
       </nav>

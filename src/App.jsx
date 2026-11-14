@@ -31,6 +31,7 @@ function App() {
     isAccountBusy,
     accountError,
     authenticate,
+    startOAuth,
     signOut,
     saveConnection,
     removeConnection,
@@ -264,6 +265,7 @@ function App() {
         isBusy={isAccountBusy}
         error={accountError}
         onAuthenticate={authenticate}
+        onStartOAuth={startOAuth}
         onSignOut={signOut}
         onSaveConnection={saveConnection}
         onRemoveConnection={removeConnection}
