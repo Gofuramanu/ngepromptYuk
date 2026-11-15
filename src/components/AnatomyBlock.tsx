@@ -6,6 +6,32 @@ import Icon from './Icon';
 // Batas tinggi nyaman sebelum muncul efek gradient fade + tombol "Lihat penuh"
 const COLLAPSED_MAX_HEIGHT = 148;
 
+interface LayerCustomIconProps {
+  src: string;
+  title: string;
+  className?: string;
+}
+
+function LayerCustomIcon({ src, title, className = 'size-[18px]' }: LayerCustomIconProps) {
+  return (
+    <span
+      role="img"
+      aria-label={title}
+      style={{
+        WebkitMaskImage: `url(${src})`,
+        maskImage: `url(${src})`,
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+      }}
+      className={`inline-block shrink-0 bg-current ${className}`}
+    />
+  );
+}
+
 interface RegenerateButtonProps {
   isRegenerating: boolean;
   disabled: boolean;
@@ -217,7 +243,7 @@ export default function AnatomyBlock({
     key,
     title,
     eyebrow,
-    icon,
+    iconSrc,
     question,
     placeholder,
     eyebrowColor,
@@ -374,7 +400,7 @@ export default function AnatomyBlock({
                 isActive ? 'scale-105' : 'group-hover:scale-105'
               }`}
             >
-              <Icon name={icon} className="size-4" />
+              <LayerCustomIcon src={iconSrc} title={title} className="size-[18px]" />
             </span>
 
             <div className="min-w-0">
@@ -551,7 +577,7 @@ export default function AnatomyBlock({
           <span
             className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ${iconStyle}`}
           >
-            <Icon name={icon} className="size-4" />
+            <LayerCustomIcon src={iconSrc} title={title} className="size-5" />
           </span>
         </div>
       </div>

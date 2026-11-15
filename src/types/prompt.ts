@@ -24,6 +24,7 @@ export interface AnatomyLayerMeta {
   title: string;
   eyebrow: string;
   icon: IconName;
+  iconSrc: string;
   question: string;
   placeholder: string;
   eyebrowColor: string;

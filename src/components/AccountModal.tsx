@@ -11,6 +11,7 @@ import type {
   UserProfile,
 } from '../types/account';
 import type { AnatomyLayersMap, PromptData } from '../types/prompt';
+import BrandLogo from './BrandLogo';
 import Icon from './Icon';
 
 function GoogleLogo() {
@@ -129,11 +130,9 @@ function WarmLuminousAuthScreen({
         <span>Close</span>
       </button>
 
-      {/* Header: Logo Claude Terracotta "P" & Typography Luminous Dark */}
+      {/* Header: Logo Konsep 1 (ikon saja) & Typography Luminous Dark */}
       <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="grid size-12 place-items-center rounded-2xl bg-[#DE7C56] text-lg font-bold text-white shadow-[0_4px_20px_rgba(222,124,86,0.35)] ring-1 ring-[#DE7C56]/30">
-          P
-        </div>
+        <BrandLogo size={52} className="transition-transform duration-300 hover:scale-105" />
 
         <h2
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
@@ -774,12 +773,10 @@ export default function AccountModal({
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-xl bg-[#DE7C56] text-sm font-bold text-white shadow-[0_4px_16px_rgba(222,124,86,0.35)] ring-1 ring-[#DE7C56]/30">
-              P
-            </div>
+            <BrandLogo size={40} />
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#DE7C56]">
-                Workspace & BYOK AI Manager
+                ngepromptYuk · Workspace & BYOK AI Manager
               </p>
               <h3 className="mt-0.5 text-base font-semibold text-zinc-100">{user.email}</h3>
             </div>

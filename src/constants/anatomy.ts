@@ -8,6 +8,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Role',
     eyebrow: 'Persona',
     icon: 'user',
+    iconSrc: '/icons/role.png',
     question: 'Siapa AI ini & keahliannya.',
     placeholder:
       'Contoh: Anda adalah seorang konsultan bisnis senior dengan spesialisasi pasar lokal Indonesia...',
@@ -23,6 +24,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Task',
     eyebrow: 'Objective',
     icon: 'listChecks',
+    iconSrc: '/icons/task.png',
     question: 'Tugas utama yang dikerjakan.',
     placeholder: 'Contoh: Susunlah rencana bisnis komprehensif selama 12 bulan ke depan...',
     eyebrowColor: 'text-orange-400',
@@ -37,6 +39,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Context',
     eyebrow: 'Background',
     icon: 'globe',
+    iconSrc: '/icons/context.png',
     question: 'Latar belakang & batasan.',
     placeholder:
       'Contoh: Target pasar adalah warga lokal Yogyakarta dan turis domestik dengan modal awal Rp50 juta...',
@@ -52,6 +55,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Reasoning',
     eyebrow: 'Logic',
     icon: 'brain',
+    iconSrc: '/icons/reasoning.png',
     question: 'Tujuan & alasan strategis.',
     placeholder:
       'Contoh: Berikan penjelasan mengapa strategi tersebut dipilih berdasarkan analisis SWOT sederhana...',
@@ -67,6 +71,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Stop Conditions',
     eyebrow: 'Guardrails',
     icon: 'hand',
+    iconSrc: '/icons/stop_conditions.png',
     question: 'Kriteria tugas selesai.',
     placeholder: 'Contoh: Berhenti jika sudah memberikan 5 strategi utama dan proyeksi finansial...',
     eyebrowColor: 'text-pink-400',
@@ -81,6 +86,7 @@ export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
     title: 'Output',
     eyebrow: 'Delivery',
     icon: 'fileOutput',
+    iconSrc: '/icons/output.png',
     question: 'Format penyajian hasil.',
     placeholder: 'Contoh: Sajikan dalam format Markdown dengan tabel untuk proyeksi keuangan...',
     eyebrowColor: 'text-violet-400',

@@ -1,5 +1,5 @@
 import type { UserAIConnectionPublic, UserProfile } from '../types/account';
-import Icon from './Icon';
+import BrandLogo from './BrandLogo';
 
 const NAV_LINKS = ['Templates', 'Frameworks', 'Community'] as const;
 
@@ -15,13 +15,8 @@ export default function Navbar({ user, connection, onOpenAccount }: NavbarProps)
   return (
     <header className="relative z-40">
       <nav className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6 lg:px-10">
-        <a href="/" className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-[0_4px_20px_-2px_rgba(249,115,22,0.55)]">
-            <Icon name="sparkles" className="size-[18px]" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-            ngepromptYuk
-          </span>
+        <a href="/" aria-label="ngepromptYuk Home" className="flex items-center">
+          <BrandLogo size={38} showWordmark />
         </a>
 
         <div className="flex items-center gap-3 sm:gap-5">
