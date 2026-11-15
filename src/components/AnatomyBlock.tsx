@@ -384,26 +384,26 @@ export default function AnatomyBlock({
           backgroundImage: cornerGlow,
           animationDelay: `${index * 45}ms`,
         }}
-        className={`glass-card animate-return-linear anatomy-card-transition group relative flex w-full cursor-pointer select-none flex-col justify-between overflow-hidden p-4 text-left outline-none lg:basis-0 ${
+        className={`glass-card animate-return-linear anatomy-card-transition group relative flex w-full cursor-pointer select-none flex-col justify-between overflow-hidden p-3 sm:p-4 text-left outline-none lg:basis-0 ${
           isActive
-            ? `min-h-[248px] lg:flex-[3.2] ${activeBorder}`
-            : `min-h-[196px] lg:flex-[1] lg:hover:flex-[1.55] hover:-translate-y-0.5 hover:border-white/20 ${
+            ? `min-h-[248px] col-span-2 sm:col-span-3 lg:col-span-1 lg:flex-[3.2] ${activeBorder}`
+            : `min-h-[176px] sm:min-h-[196px] col-span-1 lg:flex-[1] lg:hover:flex-[1.55] hover:-translate-y-0.5 hover:border-white/20 ${
                 hasContent ? activeBorder : ''
               }`
         } ${isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
       >
         {/* Bagian Atas: Ikon & Judul */}
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
             <span
-              className={`grid size-8 shrink-0 place-items-center rounded-lg ring-1 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${iconStyle} ${
+              className={`grid size-7.5 sm:size-8 shrink-0 place-items-center rounded-lg ring-1 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${iconStyle} ${
                 isActive ? 'scale-105' : 'group-hover:scale-105'
               }`}
             >
-              <LayerCustomIcon src={iconSrc} title={title} className="size-[18px]" />
+              <LayerCustomIcon src={iconSrc} title={title} className="size-4 sm:size-[18px]" />
             </span>
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div
                 className={`flex items-center gap-1.5 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   isActive
@@ -413,13 +413,13 @@ export default function AnatomyBlock({
               >
                 <span className={`size-1.5 shrink-0 rounded-full ${dotColor}`} />
                 <span
-                  className={`whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.16em] ${eyebrowColor}`}
+                  className={`truncate text-[9px] font-bold uppercase tracking-[0.16em] ${eyebrowColor}`}
                 >
                   {eyebrow}
                 </span>
               </div>
 
-              <span className="block whitespace-nowrap text-sm font-semibold leading-tight text-zinc-100">
+              <span className="block text-xs sm:text-sm font-semibold leading-tight text-zinc-100 break-words line-clamp-2">
                 {title}
               </span>
             </div>
@@ -437,8 +437,8 @@ export default function AnatomyBlock({
           )}
         </div>
 
-        {/* Bagian Tengah: Lebar teks penjelasan dikunci (w-[164px]) agar baris tidak pernah berubah-ubah */}
-        <div className="relative my-3 flex flex-1 flex-col justify-center">
+        {/* Bagian Tengah: Teks adaptif (w-full pada mobile, w-[164px] pada desktop) */}
+        <div className="relative my-2.5 sm:my-3 flex flex-1 flex-col justify-center">
           {/* Layer A: Teks "Waiting for input..." (tampil saat diam & belum ada isi) */}
           <div
             className={`transition-all duration-300 ease-out ${
@@ -448,7 +448,7 @@ export default function AnatomyBlock({
             }`}
           >
             <p
-              className={`w-[115px] font-mono text-xs italic leading-relaxed text-zinc-500 ${
+              className={`w-full max-w-[120px] font-mono text-[11px] sm:text-xs italic leading-relaxed text-zinc-500 ${
                 isBlockBusy ? 'animate-pulse text-orange-300/80' : ''
               }`}
             >
@@ -456,7 +456,7 @@ export default function AnatomyBlock({
             </p>
           </div>
 
-          {/* Layer B: Teks Penjelasan pendek & ukuran jelas (text-sm sm:text-[15px]) */}
+          {/* Layer B: Teks Penjelasan pendek & ukuran jelas */}
           <div
             className={`transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isActive || hasContent
@@ -464,7 +464,7 @@ export default function AnatomyBlock({
                 : 'pointer-events-none opacity-0 group-hover:opacity-100 group-hover:delay-75'
             }`}
           >
-            <p className="line-clamp-2 w-[164px] shrink-0 text-sm font-medium leading-snug text-zinc-100 sm:text-[15px]">
+            <p className="line-clamp-2 w-full lg:w-[164px] shrink-0 text-xs font-medium leading-snug text-zinc-100 sm:text-[14px]">
               {!isActive && hasContent ? resolvedPreview : question}
             </p>
           </div>
@@ -484,7 +484,7 @@ export default function AnatomyBlock({
                 id={inputId}
                 spellCheck={false}
                 tabIndex={isActive ? 0 : -1}
-                className={`no-scrollbar min-h-[104px] w-full cursor-text resize-none overflow-hidden rounded-xl border border-white/[0.08] bg-[#09090b]/85 px-3.5 py-2.5 text-sm leading-relaxed text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:ring-4 ${focus} ${
+                className={`no-scrollbar min-h-[104px] w-full cursor-text resize-none overflow-hidden rounded-xl border border-white/[0.08] bg-[#09090b]/85 px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:ring-4 ${focus} ${
                   isBlockBusy ? 'animate-pulse' : ''
                 }`}
                 value={value}
@@ -510,12 +510,12 @@ export default function AnatomyBlock({
 
         {/* Bagian Bawah: Footer Bar */}
         <div
-          className={`space-y-2 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          className={`space-y-1.5 sm:space-y-2 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
             isActive ? 'mt-0 max-h-0 opacity-0' : 'mt-1 max-h-12 opacity-100'
           }`}
         >
-          <div className="flex w-[164px] items-center justify-between whitespace-nowrap text-xs font-medium text-zinc-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <span>
+          <div className="flex w-full lg:w-[164px] items-center justify-between whitespace-nowrap text-[11px] sm:text-xs font-medium text-zinc-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="truncate">
               {detectedVariables.length > 0
                 ? `${detectedVariables.length} variabel`
                 : 'Klik untuk mengisi'}
@@ -546,7 +546,7 @@ export default function AnatomyBlock({
         backgroundImage: cornerGlow,
         animationDelay: isExiting ? `${index * 20}ms` : `${index * 65}ms`,
       }}
-      className={`glass-card animate-generated-expand anatomy-card-transition relative flex flex-col p-6 hover:border-white/15 sm:p-7 ${
+      className={`glass-card animate-generated-expand anatomy-card-transition relative flex flex-col p-4 sm:p-6 md:p-7 hover:border-white/15 ${
         hasContent ? activeBorder : ''
       } ${
         isExiting
@@ -554,19 +554,19 @@ export default function AnatomyBlock({
           : 'translate-y-0 scale-100 opacity-100'
       }`}
     >
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="relative flex items-start justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <span className={`size-1.5 rounded-full ${dotColor}`} />
             <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${eyebrowColor}`}>
               {eyebrow}
             </p>
           </div>
-          <label htmlFor={inputId} className="mt-1.5 block text-lg font-bold text-white sm:text-xl">
+          <label htmlFor={inputId} className="mt-1 block text-base font-bold text-white sm:text-lg md:text-xl">
             {title}
           </label>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <RegenerateButton
             title={title}
             isRegenerating={isRegenerating}
@@ -575,18 +575,18 @@ export default function AnatomyBlock({
             onClick={() => onRegenerate?.(key)}
           />
           <span
-            className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ${iconStyle}`}
+            className={`grid size-8 sm:size-10 shrink-0 place-items-center rounded-full ring-1 ${iconStyle}`}
           >
-            <LayerCustomIcon src={iconSrc} title={title} className="size-5" />
+            <LayerCustomIcon src={iconSrc} title={title} className="size-4 sm:size-5" />
           </span>
         </div>
       </div>
 
-      <p className="relative mt-4 text-sm font-medium text-zinc-300 sm:text-[15px]">{question}</p>
+      <p className="relative mt-3 text-xs sm:text-sm md:text-[15px] font-medium text-zinc-300">{question}</p>
 
       {/* Kontainer Elastik Bebas Scrollbar dengan Gradient Fade Mask */}
       <div
-        className={`relative mt-3.5 overflow-hidden rounded-xl border border-white/[0.06] bg-[#09090b]/80 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] focus-within:border-white/20 ${
+        className={`relative mt-3 sm:mt-3.5 overflow-hidden rounded-xl border border-white/[0.06] bg-[#09090b]/80 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] focus-within:border-white/20 ${
           isBlockBusy ? 'animate-pulse' : ''
         }`}
         style={{
@@ -604,7 +604,7 @@ export default function AnatomyBlock({
           spellCheck={false}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className="no-scrollbar block min-h-[124px] w-full resize-none overflow-hidden bg-transparent px-4 py-3.5 text-sm leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-500"
+          className="no-scrollbar block min-h-[110px] sm:min-h-[124px] w-full resize-none overflow-hidden bg-transparent px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-500"
           value={value}
           onChange={(e) => onChange(key, e.target.value)}
           placeholder={placeholder}

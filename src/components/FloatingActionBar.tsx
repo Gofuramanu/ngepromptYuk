@@ -58,11 +58,11 @@ export default function FloatingActionBar({ masterPrompt, onPreview }: FloatingA
   };
 
   const iconBtn =
-    'grid size-10 place-items-center rounded-xl text-zinc-400 transition hover:bg-white/[0.08] hover:text-white';
+    'grid size-9 sm:size-10 place-items-center rounded-xl text-zinc-400 transition hover:bg-white/[0.08] hover:text-white';
 
   return (
-    <div className="sticky bottom-6 z-30 -mt-3 flex justify-center px-4">
-      <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-[#151518]/90 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+    <div className="sticky bottom-4 sm:bottom-6 z-30 -mt-3 flex justify-center px-3 sm:px-4">
+      <div className="flex max-w-full items-center gap-1 rounded-2xl border border-white/10 bg-[#151518]/90 p-1.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl">
         <button
           type="button"
           onClick={handlePreview}
@@ -70,7 +70,7 @@ export default function FloatingActionBar({ masterPrompt, onPreview }: FloatingA
           title="Pratinjau Master Prompt"
           aria-label="Pratinjau Master Prompt"
         >
-          <Icon name="copy" className="size-4" />
+          <Icon name="copy" className="size-3.5 sm:size-4" />
         </button>
         <button
           type="button"
@@ -79,24 +79,24 @@ export default function FloatingActionBar({ masterPrompt, onPreview }: FloatingA
           title="Bagikan Master Prompt"
           aria-label="Bagikan Master Prompt"
         >
-          <Icon name="share" className="size-4" />
+          <Icon name="share" className="size-3.5 sm:size-4" />
         </button>
 
-        <span className="mx-2 h-7 w-px bg-white/10" />
+        <span className="mx-1 sm:mx-2 h-6 sm:h-7 w-px bg-white/10" />
 
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex min-w-[175px] items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-zinc-950 shadow-sm transition hover:bg-zinc-200 active:scale-[0.98] sm:text-sm"
+          className="inline-flex min-w-[140px] sm:min-w-[175px] items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-zinc-950 shadow-sm transition hover:bg-zinc-200 active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-sm"
         >
           {status === 'copied' && (
             <>
-              <Icon name="check" className="size-4" /> Tersalin!
+              <Icon name="check" className="size-3.5 sm:size-4" /> Tersalin!
             </>
           )}
           {status === 'shared' && (
             <>
-              <Icon name="check" className="size-4" /> Dibagikan!
+              <Icon name="check" className="size-3.5 sm:size-4" /> Dibagikan!
             </>
           )}
           {status === 'empty' && 'Isi Prompt Dulu'}

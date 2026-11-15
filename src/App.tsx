@@ -201,7 +201,7 @@ function App() {
         }}
       />
 
-      <main className="mx-auto max-w-[1120px] space-y-8 px-4 pb-16 pt-6 sm:px-6">
+      <main className="mx-auto max-w-[1120px] space-y-6 sm:space-y-8 px-3.5 pb-24 pt-4 sm:px-6 sm:pb-16 sm:pt-6">
         <PromptInput
           value={data.shortPrompt}
           onChange={(value) => updateField('shortPrompt', value)}
@@ -212,13 +212,13 @@ function App() {
         />
 
         {/* Section Prompt Anatomy */}
-        <section className="space-y-5" aria-busy={isAnyGenerating}>
-          <div className="flex flex-wrap items-end justify-between gap-4 px-1">
+        <section className="space-y-4 sm:space-y-5" aria-busy={isAnyGenerating}>
+          <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 px-1">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <h2 className="text-lg font-bold tracking-tight text-white sm:text-2xl">
                 Prompt Anatomy
               </h2>
-              <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
+              <p className="mt-0.5 sm:mt-1 text-xs text-zinc-400 sm:text-sm">
                 Configure your prompt structure using the components below.
               </p>
             </div>
@@ -227,7 +227,7 @@ function App() {
               <button
                 type="button"
                 onClick={handleResetAll}
-                className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-300 active:scale-95"
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 sm:px-4 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-300 active:scale-95"
               >
                 Reset
               </button>
@@ -237,8 +237,8 @@ function App() {
           <div
             className={
               isCompactMode
-                ? 'grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:flex lg:flex-row lg:items-stretch lg:gap-3.5'
-                : 'grid items-start gap-5 md:grid-cols-2'
+                ? 'grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3.5 lg:flex lg:flex-row lg:items-stretch lg:gap-3.5'
+                : 'grid items-start gap-4 sm:gap-5 md:grid-cols-2'
             }
           >
             {ANATOMY_LAYERS.map((layer, index) => (

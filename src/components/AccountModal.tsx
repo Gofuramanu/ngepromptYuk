@@ -118,13 +118,13 @@ function WarmLuminousAuthScreen({
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-[#000000] px-4 py-12 selection:bg-[#DE7C56]/30 selection:text-white">
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-[#000000] px-4 py-8 sm:py-12 selection:bg-[#DE7C56]/30 selection:text-white">
       {/* Tombol kembali ke workspace di kanan atas */}
       <button
         type="button"
         onClick={onClose}
         aria-label="Kembali ke editor"
-        className="fixed right-6 top-6 z-20 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0c0c0f]/80 px-3.5 py-1.5 text-xs font-medium text-zinc-400 backdrop-blur-md transition hover:border-[#DE7C56]/40 hover:bg-[#15151a] hover:text-white"
+        className="fixed right-4 top-4 sm:right-6 sm:top-6 z-20 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0c0c0f]/80 px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-zinc-400 backdrop-blur-md transition hover:border-[#DE7C56]/40 hover:bg-[#15151a] hover:text-white"
       >
         <Icon name="x" className="size-3.5" />
         <span>Close</span>
@@ -132,21 +132,21 @@ function WarmLuminousAuthScreen({
 
       {/* Header: Logo Konsep 1 (ikon saja) & Typography Luminous Dark */}
       <div className="relative z-10 flex flex-col items-center text-center">
-        <BrandLogo size={52} className="transition-transform duration-300 hover:scale-105" />
+        <BrandLogo size={48} className="sm:scale-110 transition-transform duration-300 hover:scale-105" />
 
         <h2
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          className="mt-6 text-3xl font-normal tracking-tight text-[#EDEDEF] sm:text-[35px]"
+          className="mt-4 sm:mt-6 text-2xl font-normal tracking-tight text-[#EDEDEF] sm:text-[35px]"
         >
           {mode === 'login' ? 'Welcome back' : 'Create your account'}
         </h2>
-        <p className="mt-2.5 text-sm font-normal text-zinc-400">
+        <p className="mt-2 text-xs sm:text-sm font-normal text-zinc-400">
           Refine your ideas into structured perfection.
         </p>
       </div>
 
       {/* Wrapper Ambient AI Design & Kartu Login Obsidian */}
-      <div className="relative isolate mt-8 w-full max-w-[404px]">
+      <div className="relative isolate mt-6 sm:mt-8 w-full max-w-[404px]">
         {/* Lapisan 1: Pendaran Luar Ambient AI (Breathing Pulse di latar True Black) */}
         <div
           aria-hidden="true"
@@ -167,7 +167,7 @@ function WarmLuminousAuthScreen({
         />
 
         {/* Kartu Login Solid Abu / Charcoal Warm (#141312) sesuai desain sebelumnya */}
-        <div className="relative z-10 w-full rounded-[24px] border border-white/[0.08] bg-[#141312] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.85)] sm:p-7">
+        <div className="relative z-10 w-full rounded-[22px] sm:rounded-[24px] border border-white/[0.08] bg-[#141312] p-5 sm:p-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)]">
           {/* Tombol OAuth Google & GitHub */}
           <div className="space-y-2.5">
             <button
@@ -764,12 +764,12 @@ export default function AccountModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-[26px] border border-white/[0.08] bg-[#09090b] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.95)] sm:p-7"
+        className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-[22px] sm:rounded-[26px] border border-white/[0.08] bg-[#09090b] p-4 sm:p-6 md:p-7 shadow-[0_30px_90px_rgba(0,0,0,0.95)]"
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
