@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { AnatomyLayerKey, AnatomyLayerMeta, PromptVariablesMap } from '../types/prompt';
 import { applyVariables, extractVariables } from '../utils/promptVariables';
 import Icon from './Icon';
 
 // Batas tinggi nyaman sebelum muncul efek gradient fade + tombol "Lihat penuh"
 const COLLAPSED_MAX_HEIGHT = 148;
+
+interface RegenerateButtonProps {
+  isRegenerating: boolean;
+  disabled: boolean;
+  canRegenerate: boolean;
+  onClick?: () => void;
+  compact?: boolean;
+  title: string;
+}
 
 function RegenerateButton({
   isRegenerating,
@@ -12,7 +22,7 @@ function RegenerateButton({
   onClick,
   compact = false,
   title,
-}) {
+}: RegenerateButtonProps) {
   return (
     <button
       type="button"
@@ -39,7 +49,12 @@ function RegenerateButton({
   );
 }
 
-function LayerErrorBanner({ message, onDismiss }) {
+interface LayerErrorBannerProps {
+  message: string | null;
+  onDismiss?: () => void;
+}
+
+function LayerErrorBanner({ message, onDismiss }: LayerErrorBannerProps) {
   if (!message) return null;
   return (
     <div
@@ -64,6 +79,17 @@ function LayerErrorBanner({ message, onDismiss }) {
   );
 }
 
+interface VariableSectionProps {
+  blockKey: AnatomyLayerKey;
+  detectedVariables: string[];
+  variables: PromptVariablesMap;
+  resolvedPreview: string;
+  hasFilledVars: boolean;
+  onVariableChange?: (name: string, value: string) => void;
+  onApplyVariables?: (layerKey: AnatomyLayerKey) => void;
+  compact?: boolean;
+}
+
 function VariableSection({
   blockKey,
   detectedVariables,
@@ -73,7 +99,7 @@ function VariableSection({
   onVariableChange,
   onApplyVariables,
   compact = false,
-}) {
+}: VariableSectionProps) {
   if (!detectedVariables.length) return null;
 
   return (
@@ -99,7 +125,11 @@ function VariableSection({
         )}
       </div>
 
-      <div className={`mt-2.5 grid gap-2 ${compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
+      <div
+        className={`mt-2.5 grid gap-2 ${
+          compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'
+        }`}
+      >
         {detectedVariables.map((varName) => {
           const inputId = `${blockKey}-var-${varName}`;
           return (
@@ -140,6 +170,28 @@ function VariableSection({
   );
 }
 
+export interface AnatomyBlockProps {
+  layer: AnatomyLayerMeta;
+  index?: number;
+  value: string;
+  onChange: (key: AnatomyLayerKey, value: string) => void;
+  variables?: PromptVariablesMap;
+  onVariableChange?: (name: string, value: string) => void;
+  onApplyVariables?: (layerKey: AnatomyLayerKey) => void;
+  onRegenerate?: (layerKey: AnatomyLayerKey) => void;
+  isLoading: boolean;
+  isRegenerating?: boolean;
+  isAnyGenerating?: boolean;
+  canRegenerate?: boolean;
+  layerError?: string | null;
+  onDismissError?: () => void;
+  isCompact: boolean;
+  isExiting: boolean;
+  isActive: boolean;
+  onSelect?: (layerKey: AnatomyLayerKey) => void;
+  onCollapse?: () => void;
+}
+
 export default function AnatomyBlock({
   layer,
   index = 0,
@@ -160,7 +212,7 @@ export default function AnatomyBlock({
   isActive,
   onSelect,
   onCollapse,
-}) {
+}: AnatomyBlockProps) {
   const {
     key,
     title,
@@ -178,27 +230,30 @@ export default function AnatomyBlock({
   const inputId = `anatomy-${key}`;
   const hasContent = Boolean(value?.trim());
   const isBlockBusy = isLoading || isRegenerating;
-  const cardRef = useRef(null);
-  const textareaRef = useRef(null);
-  const expandedTextareaRef = useRef(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const expandedTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Deteksi placeholder variabel [Nama] atau {{nama}} secara murni via useMemo (aman dari infinite loop)
   const detectedVariables = useMemo(() => extractVariables(value), [value]);
   const resolvedPreview = useMemo(() => applyVariables(value, variables), [value, variables]);
   const hasFilledVars = useMemo(
-    () => detectedVariables.some((name) => typeof variables?.[name] === 'string' && variables[name].length > 0),
+    () =>
+      detectedVariables.some(
+        (name) => typeof variables?.[name] === 'string' && variables[name].length > 0
+      ),
     [detectedVariables, variables]
   );
 
   // State untuk fitur Auto-Grow + "Lihat penuh / Ringkas" tanpa scrollbar
-  const [contentHeight, setContentHeight] = useState(124);
-  const [isFullText, setIsFullText] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number>(124);
+  const [isFullText, setIsFullText] = useState<boolean>(false);
+  const [isFocused, setIsFocused] = useState<boolean>(false);
 
   const isOverflowing = contentHeight > COLLAPSED_MAX_HEIGHT;
   const showFull = isFullText || isFocused || !isOverflowing;
 
-  const lastWidthRef = useRef(0);
+  const lastWidthRef = useRef<number>(0);
 
   // Hitung tinggi asli teks secara otomatis agar textarea selalu pas tanpa memotong baris akhir
   const syncTextareaHeight = useCallback(() => {
@@ -253,13 +308,13 @@ export default function AnatomyBlock({
   useEffect(() => {
     if (!isCompact || !isActive) return;
 
-    const handlePointerDown = (e) => {
-      if (cardRef.current && !cardRef.current.contains(e.target)) {
+    const handlePointerDown = (e: PointerEvent) => {
+      if (cardRef.current && e.target instanceof Node && !cardRef.current.contains(e.target)) {
         onCollapse?.();
       }
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
         onCollapse?.();
       }
@@ -282,7 +337,8 @@ export default function AnatomyBlock({
         tabIndex={0}
         aria-expanded={isActive}
         onClick={(e) => {
-          if (e.target.closest('textarea, input, button, label')) return;
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('textarea, input, button, label')) return;
           if (isActive) {
             onCollapse?.();
           } else {
@@ -290,7 +346,8 @@ export default function AnatomyBlock({
           }
         }}
         onKeyDown={(e) => {
-          if (e.target.closest('textarea, input, button, label')) return;
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('textarea, input, button, label')) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             if (isActive) onCollapse?.();
@@ -310,8 +367,8 @@ export default function AnatomyBlock({
         } ${isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
       >
         {/* Bagian Atas: Ikon & Judul */}
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
             <span
               className={`grid size-8 shrink-0 place-items-center rounded-lg ring-1 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${iconStyle} ${
                 isActive ? 'scale-105' : 'group-hover:scale-105'
@@ -324,19 +381,19 @@ export default function AnatomyBlock({
               <div
                 className={`flex items-center gap-1.5 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   isActive
-                    ? 'max-h-5 opacity-100 mb-0.5'
-                    : 'max-h-0 opacity-0 group-hover:max-h-5 group-hover:opacity-100 group-hover:mb-0.5'
+                    ? 'mb-0.5 max-h-5 opacity-100'
+                    : 'max-h-0 opacity-0 group-hover:mb-0.5 group-hover:max-h-5 group-hover:opacity-100'
                 }`}
               >
                 <span className={`size-1.5 shrink-0 rounded-full ${dotColor}`} />
                 <span
-                  className={`text-[9px] font-bold uppercase tracking-[0.16em] whitespace-nowrap ${eyebrowColor}`}
+                  className={`whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.16em] ${eyebrowColor}`}
                 >
                   {eyebrow}
                 </span>
               </div>
 
-              <span className="block text-sm font-semibold leading-tight text-zinc-100 whitespace-nowrap">
+              <span className="block whitespace-nowrap text-sm font-semibold leading-tight text-zinc-100">
                 {title}
               </span>
             </div>
@@ -355,7 +412,7 @@ export default function AnatomyBlock({
         </div>
 
         {/* Bagian Tengah: Lebar teks penjelasan dikunci (w-[164px]) agar baris tidak pernah berubah-ubah */}
-        <div className="relative my-3 flex-1 flex flex-col justify-center">
+        <div className="relative my-3 flex flex-1 flex-col justify-center">
           {/* Layer A: Teks "Waiting for input..." (tampil saat diam & belum ada isi) */}
           <div
             className={`transition-all duration-300 ease-out ${
@@ -377,11 +434,11 @@ export default function AnatomyBlock({
           <div
             className={`transition-opacity duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isActive || hasContent
-                ? 'opacity-100 delay-75'
+                ? ' opacity-100 delay-75'
                 : 'pointer-events-none opacity-0 group-hover:opacity-100 group-hover:delay-75'
             }`}
           >
-            <p className="w-[164px] shrink-0 text-sm font-medium leading-snug text-zinc-100 sm:text-[15px] line-clamp-2">
+            <p className="line-clamp-2 w-[164px] shrink-0 text-sm font-medium leading-snug text-zinc-100 sm:text-[15px]">
               {!isActive && hasContent ? resolvedPreview : question}
             </p>
           </div>
@@ -391,8 +448,8 @@ export default function AnatomyBlock({
             onClick={(e) => e.stopPropagation()}
             className={`expand-drawer ${
               isActive
-                ? 'grid-rows-[1fr] opacity-100 mt-3'
-                : 'pointer-events-none grid-rows-[0fr] opacity-0 mt-0'
+                ? 'mt-3 grid-rows-[1fr] opacity-100'
+                : 'pointer-events-none mt-0 grid-rows-[0fr] opacity-0'
             }`}
           >
             <div className="overflow-hidden">
@@ -428,12 +485,14 @@ export default function AnatomyBlock({
         {/* Bagian Bawah: Footer Bar */}
         <div
           className={`space-y-2 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            isActive ? 'max-h-0 opacity-0 mt-0' : 'max-h-12 opacity-100 mt-1'
+            isActive ? 'mt-0 max-h-0 opacity-0' : 'mt-1 max-h-12 opacity-100'
           }`}
         >
-          <div className="flex w-[164px] items-center justify-between text-xs font-medium text-zinc-400 whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="flex w-[164px] items-center justify-between whitespace-nowrap text-xs font-medium text-zinc-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
             <span>
-              {detectedVariables.length > 0 ? `${detectedVariables.length} variabel` : 'Klik untuk mengisi'}
+              {detectedVariables.length > 0
+                ? `${detectedVariables.length} variabel`
+                : 'Klik untuk mengisi'}
             </span>
             <span>→</span>
           </div>
@@ -444,8 +503,8 @@ export default function AnatomyBlock({
                 isBlockBusy
                   ? 'w-2/3 animate-pulse bg-orange-400/60'
                   : hasContent
-                  ? `w-full ${dotColor}`
-                  : 'w-1/5 bg-white/15 group-hover:w-3/5 group-hover:bg-white/35'
+                    ? `w-full ${dotColor}`
+                    : 'w-1/5 bg-white/15 group-hover:w-3/5 group-hover:bg-white/35'
               }`}
             />
           </div>
@@ -465,8 +524,8 @@ export default function AnatomyBlock({
         hasContent ? activeBorder : ''
       } ${
         isExiting
-          ? '!opacity-0 -translate-y-3 scale-[0.96] blur-[2px] duration-300'
-          : 'opacity-100 translate-y-0 scale-100'
+          ? '-translate-y-3 scale-[0.96] !opacity-0 blur-[2px] duration-300'
+          : 'translate-y-0 scale-100 opacity-100'
       }`}
     >
       <div className="relative flex items-start justify-between gap-4">
@@ -489,7 +548,9 @@ export default function AnatomyBlock({
             canRegenerate={canRegenerate}
             onClick={() => onRegenerate?.(key)}
           />
-          <span className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ${iconStyle}`}>
+          <span
+            className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ${iconStyle}`}
+          >
             <Icon name={icon} className="size-4" />
           </span>
         </div>

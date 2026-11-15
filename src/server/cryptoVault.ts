@@ -7,7 +7,7 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const VERSION_PREFIX = 'v1';
 
-function deriveKey(secret) {
+function deriveKey(secret?: string): Buffer {
   const rawSecret = (secret || process.env.CREDENTIAL_ENCRYPTION_KEY || '').trim();
   if (!rawSecret) {
     throw new Error('CREDENTIAL_ENCRYPTION_KEY belum dikonfigurasi di server.');
@@ -15,7 +15,7 @@ function deriveKey(secret) {
   return crypto.createHash('sha256').update(rawSecret, 'utf8').digest();
 }
 
-export function encryptApiKey(plainKey, secret) {
+export function encryptApiKey(plainKey: string, secret?: string): string {
   const trimmed = typeof plainKey === 'string' ? plainKey.trim() : '';
   if (!trimmed) {
     throw new Error('API Key tidak boleh kosong.');
@@ -31,7 +31,7 @@ export function encryptApiKey(plainKey, secret) {
   return `${VERSION_PREFIX}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-export function decryptApiKey(encryptedPayload, secret) {
+export function decryptApiKey(encryptedPayload: string, secret?: string): string {
   if (typeof encryptedPayload !== 'string' || !encryptedPayload.startsWith(`${VERSION_PREFIX}:`)) {
     throw new Error('Format kredensial terenkripsi tidak valid.');
   }
@@ -54,7 +54,7 @@ export function decryptApiKey(encryptedPayload, secret) {
   return decrypted.toString('utf8');
 }
 
-export function maskApiKey(plainKey) {
+export function maskApiKey(plainKey: string): string {
   const trimmed = typeof plainKey === 'string' ? plainKey.trim() : '';
   if (trimmed.length <= 8) return '••••••••';
   return `${trimmed.slice(0, 6)}••••${trimmed.slice(-4)}`;

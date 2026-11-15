@@ -1,3 +1,4 @@
+import type { AnatomyLayerKey, AnatomyLayersMap } from '../types/prompt';
 import { parseAnatomy, parseLayerContent } from '../utils/parseAnatomy';
 import { getSessionToken } from './accountService';
 
@@ -8,34 +9,44 @@ const ENDPOINT = '/api/generate';
 const REQUEST_TIMEOUT_MS = 45_000;
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  status: number;
+
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
   }
 }
 
-function messageForStatus(status, detail) {
+function messageForStatus(status: number, detail?: string): string {
   const suffix = detail ? ` (${detail})` : '';
   if (status === 400) return `Permintaan tidak valid (400)${suffix}.`;
   if (status === 401 || status === 403) return `Autentikasi provider AI ditolak${suffix}.`;
   if (status === 404) return `Endpoint atau model tidak ditemukan${suffix}.`;
   if (status === 429) return 'Batas kuota / rate limit tercapai. Silakan coba beberapa saat lagi.';
-  if (status >= 500) return `Server / provider AI sedang bermasalah${suffix}. Coba lagi beberapa saat.`;
+  if (status >= 500)
+    return `Server / provider AI sedang bermasalah${suffix}. Coba lagi beberapa saat.`;
   return `Terjadi kesalahan tak terduga (HTTP ${status})${suffix}.`;
 }
 
-async function requestGeneration(payload, { signal } = {}) {
+interface RequestOptions {
+  signal?: AbortSignal;
+}
+
+async function requestGeneration(
+  payload: Record<string, unknown>,
+  { signal }: RequestOptions = {}
+): Promise<string> {
   const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getSessionToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -44,12 +55,18 @@ async function requestGeneration(payload, { signal } = {}) {
       body: JSON.stringify(payload),
     });
   } catch (err) {
-    if (err.name === 'AbortError') throw err; // dibatalkan oleh user/unmount
-    if (err.name === 'TimeoutError') throw new ApiError('Permintaan ke AI melebihi batas waktu.', 408);
+    const error = err as Error;
+    if (error.name === 'AbortError') throw error; // dibatalkan oleh user/unmount
+    if (error.name === 'TimeoutError') {
+      throw new ApiError('Permintaan ke AI melebihi batas waktu.', 408);
+    }
     throw new ApiError('Tidak dapat terhubung ke server. Pastikan koneksi internet aktif.', 0);
   }
 
-  const json = await res.json().catch(() => null);
+  const json = (await res.json().catch(() => null)) as {
+    content?: string;
+    error?: { message?: string };
+  } | null;
 
   if (!res.ok) {
     const detail = json?.error?.message;
@@ -64,12 +81,20 @@ async function requestGeneration(payload, { signal } = {}) {
   return content;
 }
 
-export async function generateAnatomy(shortPrompt, { signal } = {}) {
+export async function generateAnatomy(
+  shortPrompt: string,
+  { signal }: RequestOptions = {}
+): Promise<AnatomyLayersMap> {
   const content = await requestGeneration({ shortPrompt }, { signal });
   return parseAnatomy(content);
 }
 
-export async function regenerateLayer(targetLayer, shortPrompt, currentLayers, { signal } = {}) {
+export async function regenerateLayer(
+  targetLayer: AnatomyLayerKey,
+  shortPrompt: string,
+  currentLayers: Partial<AnatomyLayersMap>,
+  { signal }: RequestOptions = {}
+): Promise<string> {
   const content = await requestGeneration(
     { targetLayer, shortPrompt, currentLayers },
     { signal }

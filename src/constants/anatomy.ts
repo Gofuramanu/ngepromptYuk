@@ -1,13 +1,16 @@
+import type { AnatomyLayerKey, AnatomyLayerMeta, PromptData } from '../types/prompt';
+
 // Definisi 6 lapisan anatomi prompt Claude: Role, Task, Context, Reasoning, Stop conditions, Output.
 // Teks penjelasan (question) dibuat singkat, padat, dan jelas agar langsung mudah terbaca.
-export const ANATOMY_LAYERS = [
+export const ANATOMY_LAYERS: AnatomyLayerMeta[] = [
   {
     key: 'role',
     title: 'Role',
     eyebrow: 'Persona',
     icon: 'user',
     question: 'Siapa AI ini & keahliannya.',
-    placeholder: 'Contoh: Anda adalah seorang konsultan bisnis senior dengan spesialisasi pasar lokal Indonesia...',
+    placeholder:
+      'Contoh: Anda adalah seorang konsultan bisnis senior dengan spesialisasi pasar lokal Indonesia...',
     eyebrowColor: 'text-sky-400',
     dotColor: 'bg-sky-400',
     iconStyle: 'bg-sky-500/15 text-sky-400 ring-sky-400/25',
@@ -35,7 +38,8 @@ export const ANATOMY_LAYERS = [
     eyebrow: 'Background',
     icon: 'globe',
     question: 'Latar belakang & batasan.',
-    placeholder: 'Contoh: Target pasar adalah warga lokal Yogyakarta dan turis domestik dengan modal awal Rp50 juta...',
+    placeholder:
+      'Contoh: Target pasar adalah warga lokal Yogyakarta dan turis domestik dengan modal awal Rp50 juta...',
     eyebrowColor: 'text-emerald-400',
     dotColor: 'bg-emerald-400',
     iconStyle: 'bg-emerald-500/15 text-emerald-400 ring-emerald-400/25',
@@ -49,7 +53,8 @@ export const ANATOMY_LAYERS = [
     eyebrow: 'Logic',
     icon: 'brain',
     question: 'Tujuan & alasan strategis.',
-    placeholder: 'Contoh: Berikan penjelasan mengapa strategi tersebut dipilih berdasarkan analisis SWOT sederhana...',
+    placeholder:
+      'Contoh: Berikan penjelasan mengapa strategi tersebut dipilih berdasarkan analisis SWOT sederhana...',
     eyebrowColor: 'text-rose-400',
     dotColor: 'bg-rose-400',
     iconStyle: 'bg-rose-500/15 text-rose-400 ring-rose-400/25',
@@ -87,11 +92,16 @@ export const ANATOMY_LAYERS = [
   },
 ];
 
-export const LAYER_KEYS = ANATOMY_LAYERS.map((layer) => layer.key);
+export const LAYER_KEYS: AnatomyLayerKey[] = ANATOMY_LAYERS.map((layer) => layer.key);
 
-export const EMPTY_PROMPT_DATA = {
+export const EMPTY_PROMPT_DATA: PromptData = {
   shortPrompt: '',
-  ...Object.fromEntries(LAYER_KEYS.map((key) => [key, ''])),
+  role: '',
+  task: '',
+  context: '',
+  reasoning: '',
+  stop: '',
+  output: '',
   variables: {},
 };
 

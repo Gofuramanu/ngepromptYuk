@@ -1,18 +1,29 @@
+import type {
+  AnatomyLayerKey,
+  AnatomyLayersMap,
+  BuildGenerationPayloadResult,
+  GenerationPayload,
+  GenerationResponseSchema,
+} from '../types/prompt.ts';
+
 // System instruction & builder payload untuk generasi penuh (6 lapisan) dan regenerasi parsial (1 lapisan).
 
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_CONTEXT_LENGTH = 24000;
 
-export const LAYER_GUIDELINES = {
+export const LAYER_GUIDELINES: Record<AnatomyLayerKey, string> = {
   role: 'Define the exact principal/senior persona, domain specialization, technical mastery, and 3-4 guiding engineering/domain priorities.',
   task: 'State the direct execution deliverable (NEVER write "Create a prompt to..." even if the user says "buatkan prompt..."). Break down into 3-5 numbered concrete workstreams.',
-  context: 'Provide structured bullet lines (`- **Label**: [Variable Name, misalnya: example1 / example2]`) covering project name, tech stack/tools, target audience, localization, UX preferences, and constraints so the user can fill dynamic placeholders.',
-  reasoning: 'Explain the deep domain & technical rationale: why naive approaches fail in this domain, critical integrity/architectural invariants, and what makes the output actionable.',
+  context:
+    'Provide structured bullet lines (`- **Label**: [Variable Name, misalnya: example1 / example2]`) covering project name, tech stack/tools, target audience, localization, UX preferences, and constraints so the user can fill dynamic placeholders.',
+  reasoning:
+    'Explain the deep domain & technical rationale: why naive approaches fail in this domain, critical integrity/architectural invariants, and what makes the output actionable.',
   stop: 'Start with a clear completion preamble followed by numbered or "-" bullet criteria covering architecture, core implementation (no pseudocode), security, and domain-specific edge cases.',
-  output: 'Specify the exact presentation order as numbered sections (`1. **Section Title**: detailed description of expected content...`) ready for execution.',
+  output:
+    'Specify the exact presentation order as numbered sections (`1. **Section Title**: detailed description of expected content...`) ready for execution.',
 };
 
-export const SYSTEM_INSTRUCTION = `You are "Prompt Craftsman", a Principal Prompt Architect.
+export const SYSTEM_INSTRUCTION = `You are "ngepromptYuk", a Principal Prompt Architect.
 Transform the user's short idea into a comprehensive, production-grade Master Prompt following the 6-layer Claude prompt anatomy:
 
 1. role      - ${LAYER_GUIDELINES.role}
@@ -30,7 +41,7 @@ Rules:
 - Respond ONLY with a valid JSON object containing exact keys: "role", "task", "context", "reasoning", "stop", "output".`;
 
 // Skema JSON untuk structured output Gemini (responseSchema).
-export const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA: GenerationResponseSchema = {
   type: 'OBJECT',
   properties: {
     role: { type: 'STRING' },
@@ -44,21 +55,31 @@ export const RESPONSE_SCHEMA = {
   propertyOrdering: ['role', 'task', 'context', 'reasoning', 'stop', 'output'],
 };
 
-function buildPartialRequest(targetLayer, shortPrompt, currentLayers = {}) {
-  const layerKeys = Object.keys(LAYER_GUIDELINES);
+function isAnatomyLayerKey(key: string): key is AnatomyLayerKey {
+  return Object.hasOwn(LAYER_GUIDELINES, key);
+}
+
+function buildPartialRequest(
+  targetLayer: AnatomyLayerKey,
+  shortPrompt: string,
+  currentLayers: Partial<AnatomyLayersMap> = {}
+): GenerationPayload {
+  const layerKeys = Object.keys(LAYER_GUIDELINES) as AnatomyLayerKey[];
   const guideline = LAYER_GUIDELINES[targetLayer];
 
   const siblingContext = layerKeys
     .filter((key) => key !== targetLayer)
     .map((key) => {
-      const val = typeof currentLayers[key] === 'string' ? currentLayers[key].trim() : '';
+      const raw = currentLayers[key];
+      const val = typeof raw === 'string' ? raw.trim() : '';
       return `### ${key}\n${val || '(empty)'}`;
     })
     .join('\n\n');
 
-  const currentDraft = typeof currentLayers[targetLayer] === 'string' ? currentLayers[targetLayer].trim() : '';
+  const rawTarget = currentLayers[targetLayer];
+  const currentDraft = typeof rawTarget === 'string' ? rawTarget.trim() : '';
 
-  const systemInstruction = `You are "Prompt Craftsman", a Principal Prompt Architect.
+  const systemInstruction = `You are "ngepromptYuk", a Principal Prompt Architect.
 Regenerate ONLY the "${targetLayer}" layer of a 6-layer Claude Master Prompt so it is deeper, sharper, and tightly cohesive with the other 5 layers.
 
 Target layer specification (${targetLayer}):
@@ -77,7 +98,7 @@ Rules:
     `Current "${targetLayer}" draft (produce an improved, fresh version):\n${currentDraft || '(empty)'}`,
   ].join('\n\n');
 
-  const responseSchema = {
+  const responseSchema: GenerationResponseSchema = {
     type: 'OBJECT',
     properties: { [targetLayer]: { type: 'STRING' } },
     required: [targetLayer],
@@ -90,36 +111,49 @@ Rules:
 /**
  * Memvalidasi body request `/api/generate` dan menyusun payload siap kirim ke LLM provider.
  */
-export function buildGenerationPayload(body) {
+export function buildGenerationPayload(body: Record<string, unknown> | null | undefined): BuildGenerationPayloadResult {
   const shortPrompt = typeof body?.shortPrompt === 'string' ? body.shortPrompt.trim() : '';
   const targetLayer = typeof body?.targetLayer === 'string' ? body.targetLayer.trim() : '';
 
   if (shortPrompt.length > MAX_PROMPT_LENGTH) {
     return {
-      error: { status: 400, message: `Ide prompt melebihi batas maksimal ${MAX_PROMPT_LENGTH} karakter.` },
+      error: {
+        status: 400,
+        message: `Ide prompt melebihi batas maksimal ${MAX_PROMPT_LENGTH} karakter.`,
+      },
     };
   }
 
   if (targetLayer) {
-    if (!Object.hasOwn(LAYER_GUIDELINES, targetLayer)) {
+    if (!isAnatomyLayerKey(targetLayer)) {
       return { error: { status: 400, message: `Lapisan anatomi "${targetLayer}" tidak valid.` } };
     }
 
-    const currentLayers = body?.currentLayers && typeof body.currentLayers === 'object' ? body.currentLayers : {};
-    const hasAnyLayer = Object.keys(LAYER_GUIDELINES).some(
-      (key) => typeof currentLayers[key] === 'string' && currentLayers[key].trim().length > 0
-    );
+    const currentLayers =
+      body?.currentLayers && typeof body.currentLayers === 'object'
+        ? (body.currentLayers as Partial<AnatomyLayersMap>)
+        : {};
+    const hasAnyLayer = (Object.keys(LAYER_GUIDELINES) as AnatomyLayerKey[]).some((key) => {
+      const val = currentLayers[key];
+      return typeof val === 'string' && val.trim().length > 0;
+    });
 
     if (!shortPrompt && !hasAnyLayer) {
       return {
-        error: { status: 400, message: 'Isi ide prompt atau minimal satu blok lain sebelum meregenerasi blok ini.' },
+        error: {
+          status: 400,
+          message: 'Isi ide prompt atau minimal satu blok lain sebelum meregenerasi blok ini.',
+        },
       };
     }
 
     const payload = buildPartialRequest(targetLayer, shortPrompt, currentLayers);
     if (payload.userPrompt.length > MAX_CONTEXT_LENGTH) {
       return {
-        error: { status: 400, message: 'Konteks seluruh lapisan melebihi batas panjang yang diizinkan.' },
+        error: {
+          status: 400,
+          message: 'Konteks seluruh lapisan melebihi batas panjang yang diizinkan.',
+        },
       };
     }
 

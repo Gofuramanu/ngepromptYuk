@@ -3,13 +3,21 @@
 // 1. Jika user login & memiliki koneksi AI aktif (BYOK) -> dekripsi API Key milik user di server & panggil provider pilihan user.
 // 2. Jika belum login / belum menautkan BYOK -> fallback ke gateway/model gratis bawaan aplikasi.
 
-import { buildGenerationPayload } from '../src/constants/systemInstruction.js';
-import { executeWithDefaultGateway, executeWithUserConnection } from '../src/server/providerRouter.js';
-import { extractBearerToken, getDecryptedUserConnection } from '../src/server/supabaseStore.js';
+import { buildGenerationPayload } from '../src/constants/systemInstruction.ts';
+import {
+  executeWithDefaultGateway,
+  executeWithUserConnection,
+} from '../src/server/providerRouter.ts';
+import { extractBearerToken, getDecryptedUserConnection } from '../src/server/supabaseStore.ts';
+import type { ServerlessRequest, ServerlessResponse } from './account.ts';
 
-export async function processGenerateRequest(body, token, env = process.env) {
+export async function processGenerateRequest(
+  body: Record<string, unknown> | null | undefined,
+  token: string,
+  env: Record<string, string | undefined> = process.env
+): Promise<{ status: number; data: Record<string, unknown> }> {
   const payload = buildGenerationPayload(body);
-  if (payload.error) {
+  if ('error' in payload) {
     return {
       status: payload.error.status,
       data: { error: { message: payload.error.message } },
@@ -41,22 +49,30 @@ export async function processGenerateRequest(body, token, env = process.env) {
   };
 }
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: ServerlessRequest,
+  res: ServerlessResponse
+): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: { message: 'Method not allowed. Gunakan POST.' } });
+    res.status(405).json({ error: { message: 'Method not allowed. Gunakan POST.' } });
+    return;
   }
 
   try {
     const token = extractBearerToken(req);
     const result = await processGenerateRequest(req.body || {}, token, process.env);
-    return res.status(result.status).json(result.data);
+    res.status(result.status).json(result.data);
   } catch (err) {
-    if (err.name === 'TimeoutError') {
-      return res.status(504).json({ error: { message: 'Permintaan ke provider AI melebihi batas waktu.' } });
+    const error = err as Error;
+    if (error.name === 'TimeoutError') {
+      res.status(504).json({
+        error: { message: 'Permintaan ke provider AI melebihi batas waktu.' },
+      });
+      return;
     }
-    return res.status(502).json({
-      error: { message: err.message || 'Gagal menghubungi provider AI.' },
+    res.status(502).json({
+      error: { message: error.message || 'Gagal menghubungi provider AI.' },
     });
   }
 }

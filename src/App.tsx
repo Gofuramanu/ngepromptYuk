@@ -5,15 +5,25 @@ import FloatingActionBar from './components/FloatingActionBar';
 import MasterPromptModal from './components/MasterPromptModal';
 import Navbar from './components/Navbar';
 import PromptInput from './components/PromptInput';
-import { ANATOMY_LAYERS, EMPTY_PROMPT_DATA, LAYER_KEYS, STORAGE_KEY } from './constants/anatomy';
+import {
+  ANATOMY_LAYERS,
+  EMPTY_PROMPT_DATA,
+  LAYER_KEYS,
+  STORAGE_KEY,
+} from './constants/anatomy';
 import { usePersistentState } from './hooks/usePersistentState';
 import { usePromptGenerator } from './hooks/usePromptGenerator';
 import { useUserAccount } from './hooks/useUserAccount';
+import type { SavedPromptItem } from './types/account';
+import type { AnatomyLayerKey, AnatomyLayersMap, PromptData } from './types/prompt';
 import { buildMasterPrompt } from './utils/buildMasterPrompt';
 import { applyVariables } from './utils/promptVariables';
 
 function App() {
-  const [data, setData] = usePersistentState(STORAGE_KEY, EMPTY_PROMPT_DATA);
+  const [data, setData] = usePersistentState<PromptData & Record<string, unknown>>(
+    STORAGE_KEY,
+    EMPTY_PROMPT_DATA as PromptData & Record<string, unknown>
+  );
   const {
     generate,
     regenerateSingleLayer,
@@ -40,18 +50,19 @@ function App() {
     clearAccountError,
   } = useUserAccount();
 
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
 
   // State interaksi kartu:
   // - activeLayer: key kartu yang sedang di-expand secara individual saat diklik di barisan Linear
   // - isTransitioning: animasi keluar/masuk saat beralih antara Linear <-> Expanded
-  const [activeLayer, setActiveLayer] = useState(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [activeLayer, setActiveLayer] = useState<AnatomyLayerKey | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   // Functional update: selalu memakai state terbaru (menghindari stale closure).
   const updateField = useCallback(
-    (field, value) => setData((prev) => ({ ...prev, [field]: value })),
+    (field: AnatomyLayerKey | 'shortPrompt', value: string) =>
+      setData((prev) => ({ ...prev, [field]: value })),
     [setData]
   );
 
@@ -59,7 +70,7 @@ function App() {
 
   // Memperbarui nilai variabel dinamis tanpa menimpa placeholder di teks mentah blok
   const updateVariable = useCallback(
-    (name, value) => {
+    (name: string, value: string) => {
       setData((prev) => ({
         ...prev,
         variables: {
@@ -73,7 +84,7 @@ function App() {
 
   // Opsional: membekukan nilai variabel yang sudah diisi ke dalam teks mentah blok
   const handleApplyVariablesToLayer = useCallback(
-    (layerKey) => {
+    (layerKey: AnatomyLayerKey) => {
       setData((prev) => ({
         ...prev,
         [layerKey]: applyVariables(prev[layerKey], prev.variables || {}),
@@ -89,14 +100,16 @@ function App() {
   );
 
   const hasAnyInput = useMemo(
-    () => Boolean(data.shortPrompt?.trim()) || LAYER_KEYS.some((key) => Boolean(data[key]?.trim())),
+    () =>
+      Boolean(data.shortPrompt?.trim()) ||
+      LAYER_KEYS.some((key) => Boolean(data[key]?.trim())),
     [data]
   );
 
   // Selama belum semua 6 lapisan ter-generate, tampilkan barisan 6 kartu Linear (dengan expand per-kartu)
   const isCompactMode = !allLayersGenerated;
 
-  const handleSelectLayer = useCallback((layerKey) => {
+  const handleSelectLayer = useCallback((layerKey: AnatomyLayerKey) => {
     setActiveLayer((prev) => (prev === layerKey ? null : layerKey));
   }, []);
 
@@ -123,8 +136,10 @@ function App() {
 
   // Regenerasi 1 blok anatomi sambil mengirim shortPrompt & 5 blok lainnya sebagai konteks
   const handleRegenerateLayer = useCallback(
-    async (layerKey) => {
-      const currentLayers = Object.fromEntries(LAYER_KEYS.map((key) => [key, data[key] || '']));
+    async (layerKey: AnatomyLayerKey) => {
+      const currentLayers = Object.fromEntries(
+        LAYER_KEYS.map((key) => [key, data[key] || ''])
+      ) as AnatomyLayersMap;
       const nextContent = await regenerateSingleLayer(layerKey, data.shortPrompt, currentLayers);
       if (nextContent !== null) {
         setData((prev) => ({ ...prev, [layerKey]: nextContent }));
@@ -140,21 +155,24 @@ function App() {
     if (!isCompactMode) {
       setIsTransitioning(true);
       setTimeout(() => {
-        setData(EMPTY_PROMPT_DATA);
+        setData(EMPTY_PROMPT_DATA as PromptData & Record<string, unknown>);
         setIsTransitioning(false);
       }, 320);
     } else {
-      setData(EMPTY_PROMPT_DATA);
+      setData(EMPTY_PROMPT_DATA as PromptData & Record<string, unknown>);
     }
   };
 
   // Memuat prompt dari Workspace akun user ke editor
   const handleLoadSavedPrompt = useCallback(
-    (item) => {
+    (item: SavedPromptItem) => {
       setActiveLayer(null);
+      const nextLayers = Object.fromEntries(
+        LAYER_KEYS.map((k) => [k, item.layers?.[k] || ''])
+      ) as AnatomyLayersMap;
       setData({
         shortPrompt: item.shortPrompt || '',
-        ...Object.fromEntries(LAYER_KEYS.map((k) => [k, item.layers?.[k] || ''])),
+        ...nextLayers,
         variables: item.variables || {},
       });
       setAccountModalOpen(false);

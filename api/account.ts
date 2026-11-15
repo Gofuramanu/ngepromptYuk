@@ -1,6 +1,7 @@
 // Vercel Serverless Function: POST /api/account
 // Mengelola Auth per-user, penyimpanan Master Prompt terisolasi, dan enkripsi kredensial AI (BYOK).
 
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   authenticateUser,
   deleteUserConnection,
@@ -11,9 +12,22 @@ import {
   resolveAuthenticatedUser,
   saveUserConnection,
   saveUserPrompt,
-} from '../src/server/supabaseStore.js';
+} from '../src/server/supabaseStore.ts';
 
-export async function handleAccountAction(body, token, env = process.env) {
+export interface ServerlessRequest extends IncomingMessage {
+  body?: Record<string, unknown>;
+}
+
+export interface ServerlessResponse extends ServerResponse {
+  status: (code: number) => ServerlessResponse;
+  json: (payload: unknown) => void;
+}
+
+export async function handleAccountAction(
+  body: Record<string, unknown> | null | undefined,
+  token: string,
+  env: Record<string, string | undefined> = process.env
+): Promise<{ status: number; data: Record<string, unknown> }> {
   const action = typeof body?.action === 'string' ? body.action.trim() : '';
 
   if (action === 'oauth_url') {
@@ -25,7 +39,9 @@ export async function handleAccountAction(body, token, env = process.env) {
         status: 400,
         data: {
           error: {
-            message: `Untuk memakai Continue with ${provider === 'google' ? 'Google' : 'GitHub'}, silakan isi SUPABASE_URL di Environment Variables atau masuk menggunakan Email & Password di bawah.`,
+            message: `Untuk memakai Continue with ${
+              provider === 'google' ? 'Google' : 'GitHub'
+            }, silakan isi SUPABASE_URL di Environment Variables atau masuk menggunakan Email & Password di bawah.`,
           },
         },
       };
@@ -41,7 +57,11 @@ export async function handleAccountAction(body, token, env = process.env) {
       { mode: action, email: body?.email, password: body?.password },
       env
     );
-    const connection = await getUserConnectionPublic(authResult.user, authResult.accessToken, env);
+    const connection = await getUserConnectionPublic(
+      authResult.user,
+      authResult.accessToken,
+      env
+    );
     const prompts = await listUserPrompts(authResult.user, authResult.accessToken, env);
     return {
       status: 200,
@@ -59,7 +79,11 @@ export async function handleAccountAction(body, token, env = process.env) {
   if (!user) {
     return {
       status: 401,
-      data: { error: { message: 'Sesi login tidak valid atau telah berakhir. Silakan Sign In kembali.' } },
+      data: {
+        error: {
+          message: 'Sesi login tidak valid atau telah berakhir. Silakan Sign In kembali.',
+        },
+      },
     };
   }
 
@@ -70,7 +94,11 @@ export async function handleAccountAction(body, token, env = process.env) {
   }
 
   if (action === 'save_connection') {
-    const connection = await saveUserConnection(user, token, body?.connection, env);
+    const connectionInput =
+      body?.connection && typeof body.connection === 'object'
+        ? (body.connection as Record<string, unknown>)
+        : {};
+    const connection = await saveUserConnection(user, token, connectionInput, env);
     return { status: 200, data: { connection } };
   }
 
@@ -80,12 +108,17 @@ export async function handleAccountAction(body, token, env = process.env) {
   }
 
   if (action === 'save_prompt') {
-    const prompts = await saveUserPrompt(user, token, body?.prompt, env);
+    const promptInput =
+      body?.prompt && typeof body.prompt === 'object'
+        ? (body.prompt as Record<string, unknown>)
+        : {};
+    const prompts = await saveUserPrompt(user, token, promptInput, env);
     return { status: 200, data: { prompts } };
   }
 
   if (action === 'delete_prompt') {
-    const prompts = await deleteUserPrompt(user, token, body?.promptId, env);
+    const promptId = typeof body?.promptId === 'string' ? body.promptId : '';
+    const prompts = await deleteUserPrompt(user, token, promptId, env);
     return { status: 200, data: { prompts } };
   }
 
@@ -95,19 +128,23 @@ export async function handleAccountAction(body, token, env = process.env) {
   };
 }
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: ServerlessRequest,
+  res: ServerlessResponse
+): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: { message: 'Method not allowed. Gunakan POST.' } });
+    res.status(405).json({ error: { message: 'Method not allowed. Gunakan POST.' } });
+    return;
   }
 
   try {
     const token = extractBearerToken(req);
     const result = await handleAccountAction(req.body || {}, token, process.env);
-    return res.status(result.status).json(result.data);
+    res.status(result.status).json(result.data);
   } catch (err) {
-    return res.status(400).json({
-      error: { message: err.message || 'Gagal memproses permintaan akun.' },
+    res.status(400).json({
+      error: { message: (err as Error).message || 'Gagal memproses permintaan akun.' },
     });
   }
 }

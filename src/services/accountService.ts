@@ -1,9 +1,20 @@
+import type {
+  AccountSessionData,
+  AuthMode,
+  OAuthProviderId,
+  ProviderCatalogItem,
+  SaveConnectionInput,
+  SavePromptInput,
+  SavedPromptItem,
+  UserAIConnectionPublic,
+} from '../types/account';
+
 // Layanan frontend untuk komunikasi dengan /api/account (Auth, Workspace Prompt per-User, & Koneksi AI BYOK).
 
 const ACCOUNT_ENDPOINT = '/api/account';
 const SESSION_TOKEN_KEY = 'promptCraftsmanAuthToken';
 
-export const PROVIDER_CATALOG = [
+export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
   {
     id: 'gemini',
     label: 'Google Gemini API',
@@ -56,7 +67,7 @@ export const PROVIDER_CATALOG = [
   },
 ];
 
-export function getSessionToken() {
+export function getSessionToken(): string {
   try {
     return localStorage.getItem(SESSION_TOKEN_KEY) || '';
   } catch {
@@ -64,7 +75,7 @@ export function getSessionToken() {
   }
 }
 
-export function setSessionToken(token) {
+export function setSessionToken(token: string): void {
   try {
     if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
     else localStorage.removeItem(SESSION_TOKEN_KEY);
@@ -73,9 +84,11 @@ export function setSessionToken(token) {
   }
 }
 
-async function callAccountApi(payload) {
+async function callAccountApi<T = Record<string, unknown>>(
+  payload: Record<string, unknown>
+): Promise<T> {
   const token = getSessionToken();
-  const headers = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -86,51 +99,74 @@ async function callAccountApi(payload) {
     body: JSON.stringify(payload),
   });
 
-  const json = await res.json().catch(() => null);
+  const json = (await res.json().catch(() => null)) as {
+    error?: { message?: string };
+    [key: string]: unknown;
+  } | null;
+
   if (!res.ok) {
     if (res.status === 401) setSessionToken('');
     throw new Error(json?.error?.message || `Permintaan gagal (${res.status}).`);
   }
 
-  return json;
+  return (json || {}) as T;
 }
 
-export async function authenticateAccount(mode, email, password) {
-  const data = await callAccountApi({ action: mode, email, password });
+export async function authenticateAccount(
+  mode: AuthMode,
+  email: string,
+  password: string
+): Promise<AccountSessionData> {
+  const data = await callAccountApi<AccountSessionData>({ action: mode, email, password });
   if (data?.accessToken) {
     setSessionToken(data.accessToken);
   }
   return data;
 }
 
-export async function getOAuthAuthorizeUrl(provider) {
+export async function getOAuthAuthorizeUrl(provider: OAuthProviderId): Promise<string> {
   const redirectTo = typeof window !== 'undefined' ? window.location.origin : '';
-  const data = await callAccountApi({ action: 'oauth_url', provider, redirectTo });
+  const data = await callAccountApi<{ url?: string }>({
+    action: 'oauth_url',
+    provider,
+    redirectTo,
+  });
   return data?.url || '';
 }
 
-export async function fetchCurrentSession() {
+export async function fetchCurrentSession(): Promise<AccountSessionData | null> {
   const token = getSessionToken();
   if (!token) return null;
-  return callAccountApi({ action: 'session' });
+  return callAccountApi<AccountSessionData>({ action: 'session' });
 }
 
-export async function saveUserAiConnection(connection) {
-  const data = await callAccountApi({ action: 'save_connection', connection });
+export async function saveUserAiConnection(
+  connection: SaveConnectionInput
+): Promise<UserAIConnectionPublic | null> {
+  const data = await callAccountApi<{ connection: UserAIConnectionPublic | null }>({
+    action: 'save_connection',
+    connection,
+  });
   return data.connection;
 }
 
-export async function deleteUserAiConnection() {
+export async function deleteUserAiConnection(): Promise<null> {
   await callAccountApi({ action: 'delete_connection' });
   return null;
 }
 
-export async function savePromptToWorkspace(prompt) {
-  const data = await callAccountApi({ action: 'save_prompt', prompt });
+export async function savePromptToWorkspace(prompt: SavePromptInput): Promise<SavedPromptItem[]> {
+  const data = await callAccountApi<{ prompts?: SavedPromptItem[] }>({
+    action: 'save_prompt',
+    prompt,
+  });
   return data.prompts || [];
 }
 
-export async function deletePromptFromWorkspace(promptId) {
-  const data = await callAccountApi({ action: 'delete_prompt', promptId });
+export async function deletePromptFromWorkspace(promptId: string): Promise<SavedPromptItem[]> {
+  const data = await callAccountApi<{ prompts?: SavedPromptItem[] }>({
+    action: 'delete_prompt',
+    promptId,
+  });
   return data.prompts || [];
 }

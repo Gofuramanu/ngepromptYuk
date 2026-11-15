@@ -1,5 +1,8 @@
+import type { ReactNode } from 'react';
+import type { IconName } from '../types/prompt';
+
 // Ikon inline SVG (gaya Lucide, stroke 2) — tanpa dependensi tambahan.
-const PATHS = {
+const PATHS: Record<IconName, ReactNode> = {
   sparkles: (
     <path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z" />
   ),
@@ -119,7 +122,13 @@ const PATHS = {
   ),
 };
 
-export default function Icon({ name, className = 'size-4', strokeWidth = 2 }) {
+export interface IconProps {
+  name: IconName;
+  className?: string;
+  strokeWidth?: number;
+}
+
+export default function Icon({ name, className = 'size-4', strokeWidth = 2 }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -136,4 +145,3 @@ export default function Icon({ name, className = 'size-4', strokeWidth = 2 }) {
     </svg>
   );
 }
-

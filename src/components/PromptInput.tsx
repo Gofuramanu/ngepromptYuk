@@ -1,8 +1,24 @@
-import { useLayoutEffect, useRef } from 'react';
+import { type KeyboardEvent, useLayoutEffect, useRef } from 'react';
 import Icon from './Icon';
 
-export default function PromptInput({ value, onChange, onGenerate, onCancel, isGenerating, error }) {
-  const textareaRef = useRef(null);
+export interface PromptInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onGenerate: () => void;
+  onCancel: () => void;
+  isGenerating: boolean;
+  error: string | null;
+}
+
+export default function PromptInput({
+  value,
+  onChange,
+  onGenerate,
+  onCancel,
+  isGenerating,
+  error,
+}: PromptInputProps) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Auto-grow tinggi input utama agar tidak pernah memunculkan scrollbar kuno
   useLayoutEffect(() => {
@@ -12,9 +28,11 @@ export default function PromptInput({ value, onChange, onGenerate, onCancel, isG
     el.style.height = `${Math.max(el.scrollHeight, 116)}px`;
   }, [value]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Ctrl/Cmd + Enter untuk generate cepat.
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isGenerating && value.trim()) onGenerate();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isGenerating && value.trim()) {
+      onGenerate();
+    }
   };
 
   return (

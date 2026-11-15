@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon';
 
+type ActionStatus = 'copied' | 'shared' | 'empty' | 'error' | null;
+
+export interface FloatingActionBarProps {
+  masterPrompt: string;
+  onPreview: () => void;
+}
+
 // Floating action bar di bagian bawah sesuai desain HiFi:
 // Ikon dokumen/pratinjau, ikon bagikan, divider vertikal, dan tombol putih "Copy Master Prompt".
-export default function FloatingActionBar({ masterPrompt, onPreview }) {
-  const [status, setStatus] = useState(null); // 'copied' | 'shared' | 'empty' | 'error'
+export default function FloatingActionBar({ masterPrompt, onPreview }: FloatingActionBarProps) {
+  const [status, setStatus] = useState<ActionStatus>(null);
 
   useEffect(() => {
     if (!status) return;
@@ -32,13 +39,13 @@ export default function FloatingActionBar({ masterPrompt, onPreview }) {
     }
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Master Prompt — Prompt Craftsman', text: masterPrompt });
+        await navigator.share({ title: 'Master Prompt — ngepromptYuk', text: masterPrompt });
         setStatus('shared');
       } catch (err) {
-        if (err.name !== 'AbortError') setStatus('error');
+        if ((err as Error).name !== 'AbortError') setStatus('error');
       }
     } else {
-      handleCopy();
+      await handleCopy();
     }
   };
 

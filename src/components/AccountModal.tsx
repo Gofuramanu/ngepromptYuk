@@ -1,5 +1,16 @@
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { PROVIDER_CATALOG } from '../services/accountService';
+import type {
+  AIProviderId,
+  AuthMode,
+  OAuthProviderId,
+  SaveConnectionInput,
+  SavePromptInput,
+  SavedPromptItem,
+  UserAIConnectionPublic,
+  UserProfile,
+} from '../types/account';
+import type { AnatomyLayersMap, PromptData } from '../types/prompt';
 import Icon from './Icon';
 
 function GoogleLogo() {
@@ -48,6 +59,20 @@ function ShieldIcon() {
   );
 }
 
+interface WarmLuminousAuthScreenProps {
+  isBusy: boolean;
+  error: string | null;
+  onSubmit: (mode: AuthMode, email: string, password: string) => Promise<boolean>;
+  onStartOAuth?: (provider: OAuthProviderId) => void;
+  onClearError?: () => void;
+  onClose: () => void;
+}
+
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+}
+
 function WarmLuminousAuthScreen({
   isBusy,
   error,
@@ -55,16 +80,16 @@ function WarmLuminousAuthScreen({
   onStartOAuth,
   onClearError,
   onClose,
-}) {
-  const [mode, setMode] = useState('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [forgotNotice, setForgotNotice] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
+}: WarmLuminousAuthScreenProps) {
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [forgotNotice, setForgotNotice] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const validate = () => {
-    const errors = {};
+  const validate = (): boolean => {
+    const errors: ValidationErrors = {};
     const cleanEmail = email.trim();
     if (!cleanEmail) {
       errors.email = 'Email tidak boleh kosong.';
@@ -82,7 +107,7 @@ function WarmLuminousAuthScreen({
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setForgotNotice(false);
     onClearError?.();
@@ -293,7 +318,8 @@ function WarmLuminousAuthScreen({
 
             {forgotNotice && !error && (
               <p className="rounded-xl border border-[#DE7C56]/30 bg-[#201b18] px-3.5 py-2.5 text-[11px] leading-relaxed text-[#d6cec8]">
-                Silakan gunakan menu Sign up untuk membuat akun baru atau reset password melalui dashboard Supabase Auth Anda.
+                Silakan gunakan menu Sign up untuk membuat akun baru atau reset password melalui
+                dashboard Supabase Auth Anda.
               </p>
             )}
 
@@ -320,7 +346,8 @@ function WarmLuminousAuthScreen({
                 Personal AI Connection (BYOK):
               </p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#8e8781]">
-                Your API keys are encrypted with AES-256-GCM and stored securely. We never expose keys to the browser environment.
+                Your API keys are encrypted with AES-256-GCM and stored securely. We never expose
+                keys to the browser environment.
               </p>
             </div>
           </div>
@@ -346,28 +373,44 @@ function WarmLuminousAuthScreen({
   );
 }
 
-function ConnectionSettingsTab({ connection, isBusy, error, onSave, onRemove }) {
-  const initialProvider = connection?.provider || 'gemini';
+interface ConnectionSettingsTabProps {
+  connection: UserAIConnectionPublic | null;
+  isBusy: boolean;
+  error: string | null;
+  onSave: (input: SaveConnectionInput) => Promise<boolean>;
+  onRemove: () => Promise<boolean>;
+}
+
+function ConnectionSettingsTab({
+  connection,
+  isBusy,
+  error,
+  onSave,
+  onRemove,
+}: ConnectionSettingsTabProps) {
+  const initialProvider: AIProviderId = connection?.provider || 'gemini';
   const defaultCatalog =
     PROVIDER_CATALOG.find((p) => p.id === initialProvider) || PROVIDER_CATALOG[0];
 
-  const [provider, setProvider] = useState(initialProvider);
-  const [model, setModel] = useState(connection?.model || defaultCatalog.defaultModel);
-  const [baseUrl, setBaseUrl] = useState(connection?.baseUrl || '');
-  const [apiKey, setApiKey] = useState('');
-  const [isActive, setIsActive] = useState(connection?.isActive ?? true);
-  const [savedNotice, setSavedNotice] = useState(false);
+  const [provider, setProvider] = useState<AIProviderId>(initialProvider);
+  const [model, setModel] = useState<string>(connection?.model || defaultCatalog.defaultModel);
+  const [baseUrl, setBaseUrl] = useState<string>(connection?.baseUrl || '');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [isActive, setIsActive] = useState<boolean>(connection?.isActive ?? true);
+  const [savedNotice, setSavedNotice] = useState<boolean>(false);
 
   const selectedMeta = PROVIDER_CATALOG.find((p) => p.id === provider) || PROVIDER_CATALOG[0];
 
-  const handleProviderChange = (nextProvider) => {
+  const handleProviderChange = (nextProvider: AIProviderId) => {
     setProvider(nextProvider);
     const meta = PROVIDER_CATALOG.find((p) => p.id === nextProvider);
-    if (meta) setModel(meta.defaultModel);
+    if (meta) {
+      setModel(meta.defaultModel);
+    }
     setSavedNotice(false);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSavedNotice(false);
     const ok = await onSave({
@@ -418,7 +461,7 @@ function ConnectionSettingsTab({ connection, isBusy, error, onSave, onRemove }) 
           <select
             id="byok-provider"
             value={provider}
-            onChange={(e) => handleProviderChange(e.target.value)}
+            onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
             className="mt-1 w-full rounded-xl border border-white/[0.08] bg-[#030305] px-3 py-2.5 text-xs text-zinc-100 outline-none focus:border-[#DE7C56]/70 focus:ring-2 focus:ring-[#DE7C56]/20"
           >
             {PROVIDER_CATALOG.map((item) => (
@@ -543,6 +586,16 @@ function ConnectionSettingsTab({ connection, isBusy, error, onSave, onRemove }) 
   );
 }
 
+interface SavedPromptsTabProps {
+  prompts: SavedPromptItem[];
+  currentData: PromptData;
+  isBusy: boolean;
+  error: string | null;
+  onSavePrompt: (input: SavePromptInput) => Promise<boolean>;
+  onDeletePrompt: (promptId: string) => Promise<boolean>;
+  onLoadPrompt: (item: SavedPromptItem) => void;
+}
+
 function SavedPromptsTab({
   prompts,
   currentData,
@@ -551,16 +604,16 @@ function SavedPromptsTab({
   onSavePrompt,
   onDeletePrompt,
   onLoadPrompt,
-}) {
-  const [title, setTitle] = useState('');
+}: SavedPromptsTabProps) {
+  const [title, setTitle] = useState<string>('');
 
-  const handleSaveCurrent = async (e) => {
+  const handleSaveCurrent = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fallbackTitle =
       title.trim() ||
       currentData?.shortPrompt?.trim()?.slice(0, 60) ||
       'Master Prompt Baru';
-    const layers = {
+    const layers: AnatomyLayersMap = {
       role: currentData.role || '',
       task: currentData.task || '',
       context: currentData.context || '',
@@ -644,6 +697,26 @@ function SavedPromptsTab({
   );
 }
 
+export interface AccountModalProps {
+  open: boolean;
+  onClose: () => void;
+  user: UserProfile | null;
+  connection: UserAIConnectionPublic | null;
+  prompts: SavedPromptItem[];
+  currentData: PromptData;
+  isBusy: boolean;
+  error: string | null;
+  onAuthenticate: (mode: AuthMode, email: string, password: string) => Promise<boolean>;
+  onStartOAuth: (provider: OAuthProviderId) => Promise<void>;
+  onSignOut: () => void;
+  onSaveConnection: (input: SaveConnectionInput) => Promise<boolean>;
+  onRemoveConnection: () => Promise<boolean>;
+  onSavePrompt: (input: SavePromptInput) => Promise<boolean>;
+  onDeletePrompt: (promptId: string) => Promise<boolean>;
+  onLoadPrompt: (item: SavedPromptItem) => void;
+  onClearError: () => void;
+}
+
 export default function AccountModal({
   open,
   onClose,
@@ -662,8 +735,8 @@ export default function AccountModal({
   onDeletePrompt,
   onLoadPrompt,
   onClearError,
-}) {
-  const [activeTab, setActiveTab] = useState('connection');
+}: AccountModalProps) {
+  const [activeTab, setActiveTab] = useState<'connection' | 'prompts'>('connection');
 
   if (!open) return null;
 

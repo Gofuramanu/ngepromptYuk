@@ -10,14 +10,23 @@ import {
   saveUserAiConnection,
   setSessionToken,
 } from '../services/accountService';
+import type {
+  AuthMode,
+  OAuthProviderId,
+  SaveConnectionInput,
+  SavePromptInput,
+  SavedPromptItem,
+  UserAIConnectionPublic,
+  UserProfile,
+} from '../types/account';
 
 // Mengelola sesi login user, ruang penyimpanan Master Prompt per-user, dan konfigurasi BYOK AI.
 export function useUserAccount() {
-  const [user, setUser] = useState(null);
-  const [connection, setConnection] = useState(null);
-  const [prompts, setPrompts] = useState([]);
-  const [isAccountBusy, setIsAccountBusy] = useState(false);
-  const [accountError, setAccountError] = useState(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [connection, setConnection] = useState<UserAIConnectionPublic | null>(null);
+  const [prompts, setPrompts] = useState<SavedPromptItem[]>([]);
+  const [isAccountBusy, setIsAccountBusy] = useState<boolean>(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     // Tangkap access_token dari URL hash jika kembali dari redirect OAuth (Google / GitHub)
@@ -54,22 +63,25 @@ export function useUserAccount() {
     };
   }, []);
 
-  const authenticate = useCallback(async (mode, email, password) => {
-    setIsAccountBusy(true);
-    setAccountError(null);
-    try {
-      const data = await authenticateAccount(mode, email, password);
-      setUser(data.user);
-      setConnection(data.connection || null);
-      setPrompts(data.prompts || []);
-      return true;
-    } catch (err) {
-      setAccountError(err.message);
-      return false;
-    } finally {
-      setIsAccountBusy(false);
-    }
-  }, []);
+  const authenticate = useCallback(
+    async (mode: AuthMode, email: string, password: string): Promise<boolean> => {
+      setIsAccountBusy(true);
+      setAccountError(null);
+      try {
+        const data = await authenticateAccount(mode, email, password);
+        setUser(data.user);
+        setConnection(data.connection || null);
+        setPrompts(data.prompts || []);
+        return true;
+      } catch (err) {
+        setAccountError((err as Error).message);
+        return false;
+      } finally {
+        setIsAccountBusy(false);
+      }
+    },
+    []
+  );
 
   const signOut = useCallback(() => {
     setSessionToken('');
@@ -79,7 +91,7 @@ export function useUserAccount() {
     setAccountError(null);
   }, []);
 
-  const saveConnection = useCallback(async (input) => {
+  const saveConnection = useCallback(async (input: SaveConnectionInput): Promise<boolean> => {
     setIsAccountBusy(true);
     setAccountError(null);
     try {
@@ -87,14 +99,14 @@ export function useUserAccount() {
       setConnection(updated);
       return true;
     } catch (err) {
-      setAccountError(err.message);
+      setAccountError((err as Error).message);
       return false;
     } finally {
       setIsAccountBusy(false);
     }
   }, []);
 
-  const removeConnection = useCallback(async () => {
+  const removeConnection = useCallback(async (): Promise<boolean> => {
     setIsAccountBusy(true);
     setAccountError(null);
     try {
@@ -102,14 +114,14 @@ export function useUserAccount() {
       setConnection(null);
       return true;
     } catch (err) {
-      setAccountError(err.message);
+      setAccountError((err as Error).message);
       return false;
     } finally {
       setIsAccountBusy(false);
     }
   }, []);
 
-  const savePrompt = useCallback(async (promptPayload) => {
+  const savePrompt = useCallback(async (promptPayload: SavePromptInput): Promise<boolean> => {
     setIsAccountBusy(true);
     setAccountError(null);
     try {
@@ -117,14 +129,14 @@ export function useUserAccount() {
       setPrompts(nextList);
       return true;
     } catch (err) {
-      setAccountError(err.message);
+      setAccountError((err as Error).message);
       return false;
     } finally {
       setIsAccountBusy(false);
     }
   }, []);
 
-  const removePrompt = useCallback(async (promptId) => {
+  const removePrompt = useCallback(async (promptId: string): Promise<boolean> => {
     setIsAccountBusy(true);
     setAccountError(null);
     try {
@@ -132,14 +144,14 @@ export function useUserAccount() {
       setPrompts(nextList);
       return true;
     } catch (err) {
-      setAccountError(err.message);
+      setAccountError((err as Error).message);
       return false;
     } finally {
       setIsAccountBusy(false);
     }
   }, []);
 
-  const startOAuth = useCallback(async (provider) => {
+  const startOAuth = useCallback(async (provider: OAuthProviderId): Promise<void> => {
     setIsAccountBusy(true);
     setAccountError(null);
     try {
@@ -148,7 +160,7 @@ export function useUserAccount() {
         window.location.assign(url);
       }
     } catch (err) {
-      setAccountError(err.message);
+      setAccountError((err as Error).message);
     } finally {
       setIsAccountBusy(false);
     }

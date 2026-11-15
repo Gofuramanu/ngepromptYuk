@@ -1,14 +1,14 @@
-# ✴ Prompt Craftsman
+# ✴ ngepromptYuk
 
 > **Craft raw thoughts into production-grade Master Prompts using Claude's 6-Layer Prompt Anatomy.**
 
-**Prompt Craftsman** adalah aplikasi web berbasis AI yang dirancang untuk memproses ide prompt singkat dari pengguna dan meraciknya menjadi sebuah **Master Prompt** berstandar industri. Aplikasi ini mengimplementasikan metodologi **6 Lapisan Anatomi Prompt Claude** untuk memastikan instruksi yang diberikan kepada Large Language Model (LLM) memiliki konteks yang jelas, arahan yang presisi, dan hasil akhir yang dapat ditindaklanjuti (*actionable*).
+**ngepromptYuk** adalah aplikasi web berbasis AI yang dirancang untuk memproses ide prompt singkat dari pengguna dan meraciknya menjadi sebuah **Master Prompt** berstandar industri. Aplikasi ini mengimplementasikan metodologi **6 Lapisan Anatomi Prompt Claude** untuk memastikan instruksi yang diberikan kepada Large Language Model (LLM) memiliki konteks yang jelas, arahan yang presisi, dan hasil akhir yang dapat ditindaklanjuti (*actionable*).
 
 ---
 
 ## 🏛️ Anatomi 6 Lapisan Prompt Claude
 
-Prompt yang berkualitas tinggi dibangun di atas fondasi yang terstruktur, bukan sekadar kalimat instruksi lepas. Prompt Craftsman membedah dan menyusun setiap permintaan ke dalam 6 dimensi:
+Prompt yang berkualitas tinggi dibangun di atas fondasi yang terstruktur, bukan sekadar kalimat instruksi lepas. **ngepromptYuk** membedah dan menyusun setiap permintaan ke dalam 6 dimensi:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -73,20 +73,21 @@ Prompt yang berkualitas tinggi dibangun di atas fondasi yang terstruktur, bukan 
 ## ⚡ Fitur Utama Aplikasi
 
 - **💡 Instant Idea to Anatomy:** Masukkan ide sederhana dalam 1 kalimat, AI akan meramunya menjadi 6 lapisan lengkap.
-- **✏️ Editable Interactive Canvas:** Setiap lapisan dapat disesuaikan dan disunting langsung tanpa kehilangan fokus kursor.
+- **🔄 Partial Layer Regeneration:** Regenerasi hanya 1 blok spesifik sambil menjaga keselarasan dengan 5 blok lainnya.
+- **🧩 Smart Variables (`[Variabel]` & `{{variabel}}`):** Deteksi otomatis variabel dinamis dengan form pengisian dan pratinjau real-time.
+- **🔐 Multi-User Workspace & Encrypted BYOK Vault:** Simpan koleksi Master Prompt per akun dan hubungkan API Key pribadi (Gemini, Claude, OpenAI, OpenRouter, Custom Gateway) yang dienkripsi dengan **AES-256-GCM**.
 - **📋 One-Click Copy Master Prompt:** Menggabungkan seluruh lapisan menjadi satu Master Prompt siap pakai dengan format markdown bersih.
-- **🛡️ Secure API Architecture:** Menggunakan proxy Vite lokal di sisi server (Node.js) sehingga API key tidak pernah dibocorkan ke bundle browser pengguna.
-- **🔄 Resilient Model Fallback:** Otomatis beralih ke model Gemini alternatif jika salah satu model mengalami antrean atau lonjakan trafik.
 - **💾 Auto-Save Local Storage:** Data input tersimpan aman secara otomatis di browser menggunakan custom React hook.
 
 ---
 
 ## 🛠️ Tech Stack
 
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
 - **Frontend:** [React 19](https://react.dev/), [Vite](https://vite.dev/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **AI Engine:** Google Gemini API (`gemini-3.5-flash-lite` dengan automatic fallback)
-- **Architecture:** Custom Middleware Proxy, Custom React Hooks (`usePersistentState`, `usePromptGenerator`), Error Boundary
+- **Backend & Auth:** Vercel Serverless Functions (`/api/generate`, `/api/account`), Supabase Auth & PostgreSQL (dengan fallback Encrypted Vault), AES-256-GCM Encryption
+- **AI Providers:** Multi-Provider BYOK (Google Gemini, Anthropic Claude, OpenAI, OpenRouter, Custom OpenAI-Compatible Gateway)
 
 ---
 
@@ -104,16 +105,7 @@ npm install
 ```
 
 ### 3. Konfigurasi Environment Variable
-Salin file `.env.example` menjadi `.env`:
-```bash
-cp .env.example .env
-```
-Buka file `.env` dan masukkan API Key Gemini Anda:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-> Dapatkan API Key gratis di [Google AI Studio](https://aistudio.google.com/apikey).
+Salin file `.env.example` menjadi `.env` lalu sesuaikan kredensial Anda.
 
 ### 4. Jalankan Development Server
 ```bash

@@ -1,15 +1,17 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     extends: [
       js.configs.recommended,
+      ...tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
@@ -20,7 +22,7 @@ export default defineConfig([
   },
   {
     // File konfigurasi & serverless functions berjalan di Node, bukan browser.
-    files: ['*.config.js', 'api/**/*.js', 'src/server/**/*.js'],
+    files: ['*.config.{js,ts}', 'api/**/*.{js,ts}', 'src/server/**/*.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
-])
+]);

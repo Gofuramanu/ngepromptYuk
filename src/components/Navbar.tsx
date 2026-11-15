@@ -1,8 +1,15 @@
+import type { UserAIConnectionPublic, UserProfile } from '../types/account';
 import Icon from './Icon';
 
-const NAV_LINKS = ['Templates', 'Frameworks', 'Community'];
+const NAV_LINKS = ['Templates', 'Frameworks', 'Community'] as const;
 
-export default function Navbar({ user, connection, onOpenAccount }) {
+export interface NavbarProps {
+  user: UserProfile | null;
+  connection: UserAIConnectionPublic | null;
+  onOpenAccount: () => void;
+}
+
+export default function Navbar({ user, connection, onOpenAccount }: NavbarProps) {
   const hasActiveByok = Boolean(user && connection?.isActive);
 
   return (
@@ -13,7 +20,7 @@ export default function Navbar({ user, connection, onOpenAccount }) {
             <Icon name="sparkles" className="size-[18px]" />
           </span>
           <span className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-            Prompt Craftsman
+            ngepromptYuk
           </span>
         </a>
 
@@ -44,7 +51,7 @@ export default function Navbar({ user, connection, onOpenAccount }) {
                 : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200'
             }`}
             title={
-              hasActiveByok
+              hasActiveByok && connection
                 ? `Terhubung ke AI milik Anda: ${connection.provider} (${connection.model})`
                 : 'Memakai kuota/model gratis bawaan aplikasi. Klik untuk menautkan AI milik Anda.'
             }
@@ -55,7 +62,7 @@ export default function Navbar({ user, connection, onOpenAccount }) {
               }`}
             />
             <span>
-              {hasActiveByok
+              {hasActiveByok && connection
                 ? `BYOK: ${connection.provider} (${connection.model})`
                 : 'Mode: Free Default AI'}
             </span>
