@@ -272,24 +272,42 @@ export async function getDecryptedUserConnection(token, env = process.env) {
     const row = rows?.[0];
     if (!row || !row.is_active || !row.encrypted_api_key) return null;
 
+    let apiKey;
+    try {
+      apiKey = decryptApiKey(row.encrypted_api_key, secret);
+    } catch {
+      throw new Error(
+        'Kredensial AI pribadi gagal didekripsi. Silakan simpan ulang API Key Anda di menu Akun.'
+      );
+    }
+
     return {
       userId: user.id,
       provider: row.provider,
       model: row.model,
       baseUrl: row.base_url || '',
-      apiKey: decryptApiKey(row.encrypted_api_key, secret),
+      apiKey,
     };
   }
 
   const record = localStore.connectionsByUser.get(user.id);
   if (!record || !record.isActive || !record.encryptedApiKey) return null;
 
+  let apiKey;
+  try {
+    apiKey = decryptApiKey(record.encryptedApiKey, secret);
+  } catch {
+    throw new Error(
+      'Kredensial AI pribadi gagal didekripsi. Silakan simpan ulang API Key Anda di menu Akun.'
+    );
+  }
+
   return {
     userId: user.id,
     provider: record.provider,
     model: record.model,
     baseUrl: record.baseUrl || '',
-    apiKey: decryptApiKey(record.encryptedApiKey, secret),
+    apiKey,
   };
 }
 
@@ -325,7 +343,7 @@ export async function saveUserConnection(user, token, input, env = process.env) 
       keyHint = maskApiKey(rawApiKey);
     } else {
       const existingRes = await fetch(
-        `${supa.url}/rest/v1/user_ai_connections?user_id=eq.${encodeURIComponent(user.id)}&select=encrypted_api_key,key_hint`,
+        `${supa.url}/rest/v1/user_ai_connections?user_id=eq.${encodeURIComponent(user.id)}&select=provider,encrypted_api_key,key_hint`,
         {
           headers: {
             apikey: supa.anonKey,
@@ -337,6 +355,9 @@ export async function saveUserConnection(user, token, input, env = process.env) 
       const existing = existingRows?.[0];
       if (!existing?.encrypted_api_key) {
         throw new Error('API Key wajib diisi untuk koneksi baru.');
+      }
+      if (existing.provider !== provider) {
+        throw new Error('API Key baru wajib diisi saat mengganti provider AI.');
       }
       encryptedApiKey = existing.encrypted_api_key;
       keyHint = existing.key_hint;
@@ -377,6 +398,9 @@ export async function saveUserConnection(user, token, input, env = process.env) 
   if (!rawApiKey && !existing?.encryptedApiKey) {
     throw new Error('API Key wajib diisi untuk koneksi baru.');
   }
+  if (!rawApiKey && existing && existing.provider !== provider) {
+    throw new Error('API Key baru wajib diisi saat mengganti provider AI.');
+  }
 
   const encryptedApiKey = rawApiKey
     ? encryptApiKey(rawApiKey, secret)
@@ -400,7 +424,7 @@ export async function saveUserConnection(user, token, input, env = process.env) 
 export async function deleteUserConnection(user, token, env = process.env) {
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
-    await fetch(
+    const res = await fetch(
       `${supa.url}/rest/v1/user_ai_connections?user_id=eq.${encodeURIComponent(user.id)}`,
       {
         method: 'DELETE',
@@ -410,6 +434,9 @@ export async function deleteUserConnection(user, token, env = process.env) {
         },
       }
     );
+    if (!res.ok) {
+      throw new Error('Gagal menghapus kredensial AI dari database.');
+    }
     return true;
   }
 
@@ -499,7 +526,7 @@ export async function saveUserPrompt(user, token, input, env = process.env) {
 export async function deleteUserPrompt(user, token, promptId, env = process.env) {
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
-    await fetch(
+    const res = await fetch(
       `${supa.url}/rest/v1/user_prompts?id=eq.${encodeURIComponent(promptId)}&user_id=eq.${encodeURIComponent(user.id)}`,
       {
         method: 'DELETE',
@@ -509,6 +536,9 @@ export async function deleteUserPrompt(user, token, promptId, env = process.env)
         },
       }
     );
+    if (!res.ok) {
+      throw new Error('Gagal menghapus prompt dari database.');
+    }
     return listUserPrompts(user, token, env);
   }
 

@@ -212,7 +212,7 @@ function App() {
         />
 
         {/* Section Prompt Anatomy */}
-        <section className="space-y-4 sm:space-y-5" aria-busy={isAnyGenerating}>
+        <section id="prompt-anatomy" className="space-y-4 sm:space-y-5" aria-busy={isAnyGenerating}>
           <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 px-1">
             <div>
               <h2 className="text-lg font-bold tracking-tight text-white sm:text-2xl">

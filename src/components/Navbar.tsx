@@ -1,8 +1,6 @@
 import type { UserAIConnectionPublic, UserProfile } from '../types/account';
 import BrandLogo from './BrandLogo';
 
-const NAV_LINKS = ['Templates', 'Frameworks', 'Community'] as const;
-
 export interface NavbarProps {
   user: UserProfile | null;
   connection: UserAIConnectionPublic | null;
@@ -21,16 +19,33 @@ export default function Navbar({ user, connection, onOpenAccount }: NavbarProps)
 
         <div className="flex items-center gap-2 sm:gap-5">
           <ul className="hidden items-center gap-8 md:flex">
-            {NAV_LINKS.map((label) => (
-              <li key={label}>
-                <a
-                  href={`#${label.toLowerCase()}`}
-                  className="text-sm text-zinc-400 transition hover:text-white"
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
+            <li>
+              <button
+                type="button"
+                onClick={onOpenAccount}
+                className="text-sm text-zinc-400 transition hover:text-white"
+              >
+                Templates
+              </button>
+            </li>
+            <li>
+              <a
+                href="#prompt-anatomy"
+                className="text-sm text-zinc-400 transition hover:text-white"
+              >
+                Frameworks
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://github.com/Gofuramanu/ngepromptYuk"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-zinc-400 transition hover:text-white"
+              >
+                Community
+              </a>
+            </li>
           </ul>
 
           <span
@@ -66,9 +81,14 @@ export default function Navbar({ user, connection, onOpenAccount }: NavbarProps)
           <button
             type="button"
             onClick={onOpenAccount}
-            className="rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:border-orange-500/40 hover:bg-white/[0.08] sm:px-5 sm:py-2 sm:text-sm"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:border-orange-500/40 hover:bg-white/[0.08] sm:px-5 sm:py-2 sm:text-sm"
           >
-            {user ? user.email.split('@')[0] : 'Sign In'}
+            <span
+              className={`size-1.5 rounded-full sm:hidden ${
+                hasActiveByok ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}
+            />
+            <span>{user ? user.email.split('@')[0] : 'Sign In'}</span>
           </button>
         </div>
       </nav>

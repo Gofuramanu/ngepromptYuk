@@ -75,6 +75,7 @@ export function useUserAccount() {
       })
       .catch(() => {
         if (!cancelled) {
+          setSessionToken('');
           setUser(null);
           setConnection(null);
           setPrompts([]);

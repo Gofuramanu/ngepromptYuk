@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { PROVIDER_CATALOG } from '../services/accountService';
 import type {
   AIProviderId,
@@ -399,6 +399,7 @@ function ConnectionSettingsTab({
   const [savedNotice, setSavedNotice] = useState<boolean>(false);
 
   const selectedMeta = PROVIDER_CATALOG.find((p) => p.id === provider) || PROVIDER_CATALOG[0];
+  const isSwitchingProvider = Boolean(connection && provider !== connection.provider);
 
   const handleProviderChange = (nextProvider: AIProviderId) => {
     setProvider(nextProvider);
@@ -539,14 +540,16 @@ function ConnectionSettingsTab({
         <input
           id="byok-key"
           type="password"
-          required={!connection}
+          required={!connection || isSwitchingProvider}
           autoComplete="off"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder={
-            connection
-              ? 'Kosongkan jika hanya ingin mengganti model, atau isi untuk ganti API Key baru'
-              : selectedMeta.keyPlaceholder
+            isSwitchingProvider
+              ? `Masukkan API Key untuk ${selectedMeta.label} (${selectedMeta.keyPlaceholder})`
+              : connection
+                ? 'Kosongkan jika hanya ingin mengganti model, atau isi untuk ganti API Key baru'
+                : selectedMeta.keyPlaceholder
           }
           className="mt-1 w-full rounded-xl border border-white/[0.08] bg-[#030305] px-3.5 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-[#DE7C56]/70 focus:ring-2 focus:ring-[#DE7C56]/20"
         />
@@ -736,6 +739,19 @@ export default function AccountModal({
   onClearError,
 }: AccountModalProps) {
   const [activeTab, setActiveTab] = useState<'connection' | 'prompts'>('connection');
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
