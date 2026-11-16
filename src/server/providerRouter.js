@@ -240,13 +240,23 @@ export async function executeWithDefaultGateway(payload, env = process.env) {
   const geminiKey = (env.GEMINI_API_KEY || '').trim();
   const configuredGeminiModel = (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
 
-  const GATEWAY_TIMEOUT_MS = 22_000;
+  const TOTAL_BUDGET_MS = 52_000;
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
   let lastError = null;
 
   if (routerUrl && routerKey) {
-    // Jika tidak ada cadangan Gemini, coba maksimal 2x (berguna untuk router model acak seperti openrouter/free)
+    // Jika ada cadangan Gemini, beri waktu 28s ke gateway utama agar masih ada sisa waktu fallback ke Gemini (~4-6s).
+    // Jika tidak ada cadangan Gemini, beri waktu 42s di percobaan pertama karena model openrouter/free sering butuh 25-35s.
+    const primaryTimeoutMs = geminiKey ? 28_000 : 42_000;
     const maxRouterAttempts = geminiKey ? 1 : 2;
+
     for (let attempt = 1; attempt <= maxRouterAttempts; attempt += 1) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs < 8_000) break;
+
+      const attemptTimeoutMs =
+        attempt === 1 ? Math.min(primaryTimeoutMs, remainingMs) : remainingMs;
+
       try {
         const content = await callOpenAICompatibleProvider({
           baseUrl: routerUrl,
@@ -254,7 +264,7 @@ export async function executeWithDefaultGateway(payload, env = process.env) {
           model: routerModel,
           payload,
           providerLabel: 'Default AI Gateway',
-          timeoutMs: GATEWAY_TIMEOUT_MS,
+          timeoutMs: attemptTimeoutMs,
         });
 
         if (!content.trim()) {
@@ -285,12 +295,15 @@ export async function executeWithDefaultGateway(payload, env = process.env) {
       ]),
     ];
     for (const candidateModel of geminiCandidates) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs < 5_000) break;
+
       try {
         const content = await callGeminiProvider({
           apiKey: geminiKey,
           model: candidateModel,
           payload,
-          timeoutMs: GATEWAY_TIMEOUT_MS,
+          timeoutMs: Math.min(22_000, remainingMs),
         });
 
         if (!content.trim()) {
