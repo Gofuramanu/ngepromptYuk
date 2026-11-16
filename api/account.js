@@ -35,6 +35,40 @@ export async function handleAccountAction(body, token, env = process.env) {
         },
       };
     }
+    const supaAnonKey = (
+      env.SUPABASE_ANON_KEY ||
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      env.SUPABASE_PUBLISHABLE_KEY ||
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      env.VITE_SUPABASE_ANON_KEY ||
+      ''
+    ).trim();
+
+    if (supaAnonKey) {
+      try {
+        const settingsRes = await fetch(`${supaUrl}/auth/v1/settings`, {
+          headers: { apikey: supaAnonKey },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (settingsRes.ok) {
+          const settings = await settingsRes.json().catch(() => null);
+          if (settings?.external && settings.external[provider] === false) {
+            const label = provider === 'google' ? 'Google' : 'GitHub';
+            return {
+              status: 400,
+              data: {
+                error: {
+                  message: `Provider ${label} belum diaktifkan di Supabase Dashboard (Authentication -> Providers -> ${label}). Silakan aktifkan terlebih dahulu atau masuk dengan Email & Password.`,
+                },
+              },
+            };
+          }
+        }
+      } catch {
+        // Lanjutkan redirect jika pengecekan settings timeout/gagal
+      }
+    }
+
     const url = `${supaUrl}/auth/v1/authorize?provider=${provider}${
       redirectTo ? `&redirect_to=${encodeURIComponent(redirectTo)}` : ''
     }`;

@@ -26,13 +26,36 @@ export function useUserAccount() {
   const [connection, setConnection] = useState<UserAIConnectionPublic | null>(null);
   const [prompts, setPrompts] = useState<SavedPromptItem[]>([]);
   const [isAccountBusy, setIsAccountBusy] = useState<boolean>(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const searchParams = new URLSearchParams(window.location.search);
+    return (
+      hashParams.get('error_description') ||
+      searchParams.get('error_description') ||
+      hashParams.get('error') ||
+      searchParams.get('error') ||
+      null
+    );
+  });
 
   useEffect(() => {
-    // Tangkap access_token dari URL hash jika kembali dari redirect OAuth (Google / GitHub)
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      const hashToken = params.get('access_token');
+    // Tangkap access_token atau error dari URL jika kembali dari redirect OAuth (Google / GitHub)
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const searchParams = new URLSearchParams(window.location.search);
+
+      if (
+        hashParams.has('error') ||
+        hashParams.has('error_description') ||
+        searchParams.has('error') ||
+        searchParams.has('error_description')
+      ) {
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+
+      const hashToken = hashParams.get('access_token');
       if (hashToken) {
         setSessionToken(hashToken);
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
