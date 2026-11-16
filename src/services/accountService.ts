@@ -18,8 +18,8 @@ export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
   {
     id: 'gemini',
     label: 'Google Gemini API',
-    defaultModel: 'gemini-2.5-flash',
-    suggestedModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+    defaultModel: 'gemini-3.5-flash-lite',
+    suggestedModels: ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview'],
     keyPlaceholder: 'AIzaSy...',
     consoleUrl: 'https://aistudio.google.com/apikey',
     requiresBaseUrl: false,

@@ -5,7 +5,7 @@ const UPSTREAM_TIMEOUT_MS = 45_000;
 export const SUPPORTED_PROVIDERS = {
   gemini: {
     label: 'Google Gemini API',
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-3.5-flash-lite',
     requiresBaseUrl: false,
   },
   anthropic: {
@@ -78,7 +78,7 @@ export function extractOpenAICompatibleContent(rawText) {
   return { content: typeof textFallback === 'string' ? textFallback : '', data };
 }
 
-async function callGeminiProvider({ apiKey, model, payload }) {
+async function callGeminiProvider({ apiKey, model, payload, timeoutMs = UPSTREAM_TIMEOUT_MS }) {
   const cleanModel = (model || SUPPORTED_PROVIDERS.gemini.defaultModel)
     .trim()
     .replace(/^models\//, '');
@@ -90,7 +90,7 @@ async function callGeminiProvider({ apiKey, model, payload }) {
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,
       },
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: payload.systemInstruction }] },
         contents: [{ role: 'user', parts: [{ text: payload.userPrompt }] }],
@@ -138,7 +138,14 @@ async function callAnthropicProvider({ apiKey, model, payload }) {
   return content;
 }
 
-async function callOpenAICompatibleProvider({ baseUrl, apiKey, model, payload, providerLabel }) {
+async function callOpenAICompatibleProvider({
+  baseUrl,
+  apiKey,
+  model,
+  payload,
+  providerLabel,
+  timeoutMs = UPSTREAM_TIMEOUT_MS,
+}) {
   const cleanUrl = baseUrl.trim().replace(/\/+$/, '');
   const res = await fetch(`${cleanUrl}/chat/completions`, {
     method: 'POST',
@@ -146,7 +153,7 @@ async function callOpenAICompatibleProvider({ baseUrl, apiKey, model, payload, p
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
       model: model.trim(),
       stream: false,
@@ -224,56 +231,88 @@ export async function executeWithUserConnection(connection, payload) {
 
 /**
  * Fallback ke gateway/model gratis bawaan aplikasi (hanya dipakai jika user belum login / belum set BYOK).
+ * Menggunakan timeout lebih ringkas per percobaan serta fallback otomatis antar gateway/model saat overload/timeout.
  */
 export async function executeWithDefaultGateway(payload, env = process.env) {
   const routerUrl = (env.NINEROUTER_BASE_URL || '').trim().replace(/\/+$/, '');
   const routerKey = (env.NINEROUTER_API_KEY || '').trim();
   const routerModel = (env.NINEROUTER_MODEL || 'openrouter/free').trim();
+  const geminiKey = (env.GEMINI_API_KEY || '').trim();
+  const configuredGeminiModel = (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+
+  const GATEWAY_TIMEOUT_MS = 22_000;
+  let lastError = null;
 
   if (routerUrl && routerKey) {
-    const content = await callOpenAICompatibleProvider({
-      baseUrl: routerUrl,
-      apiKey: routerKey,
-      model: routerModel,
-      payload,
-      providerLabel: 'Default AI Gateway',
-    });
+    // Jika tidak ada cadangan Gemini, coba maksimal 2x (berguna untuk router model acak seperti openrouter/free)
+    const maxRouterAttempts = geminiKey ? 1 : 2;
+    for (let attempt = 1; attempt <= maxRouterAttempts; attempt += 1) {
+      try {
+        const content = await callOpenAICompatibleProvider({
+          baseUrl: routerUrl,
+          apiKey: routerKey,
+          model: routerModel,
+          payload,
+          providerLabel: 'Default AI Gateway',
+          timeoutMs: GATEWAY_TIMEOUT_MS,
+        });
 
-    if (!content.trim()) {
-      throw new Error('Server gateway tidak mengembalikan konten dari model AI.');
+        if (!content.trim()) {
+          throw new Error('Server gateway tidak mengembalikan konten dari model AI.');
+        }
+
+        return {
+          content,
+          meta: {
+            source: 'default_gateway',
+            provider: 'default',
+            model: routerModel,
+          },
+        };
+      } catch (err) {
+        lastError = err;
+      }
     }
-
-    return {
-      content,
-      meta: {
-        source: 'default_gateway',
-        provider: 'default',
-        model: routerModel,
-      },
-    };
   }
 
-  const geminiKey = (env.GEMINI_API_KEY || '').trim();
-  const geminiModel = (env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
   if (geminiKey) {
-    const content = await callGeminiProvider({
-      apiKey: geminiKey,
-      model: geminiModel,
-      payload,
-    });
+    const geminiCandidates = [
+      ...new Set([
+        configuredGeminiModel,
+        'gemini-3.5-flash-lite',
+        'gemini-flash-lite-latest',
+        'gemini-3-flash-preview',
+      ]),
+    ];
+    for (const candidateModel of geminiCandidates) {
+      try {
+        const content = await callGeminiProvider({
+          apiKey: geminiKey,
+          model: candidateModel,
+          payload,
+          timeoutMs: GATEWAY_TIMEOUT_MS,
+        });
 
-    if (!content.trim()) {
-      throw new Error('Gemini fallback tidak mengembalikan konten.');
+        if (!content.trim()) {
+          throw new Error('Gemini fallback tidak mengembalikan konten.');
+        }
+
+        return {
+          content,
+          meta: {
+            source: 'default_gateway',
+            provider: 'gemini_fallback',
+            model: candidateModel,
+          },
+        };
+      } catch (err) {
+        lastError = err;
+      }
     }
+  }
 
-    return {
-      content,
-      meta: {
-        source: 'default_gateway',
-        provider: 'gemini_fallback',
-        model: geminiModel,
-      },
-    };
+  if (lastError) {
+    throw lastError;
   }
 
   throw new Error(

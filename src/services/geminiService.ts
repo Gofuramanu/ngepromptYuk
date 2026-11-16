@@ -6,7 +6,7 @@ import { getSessionToken } from './accountService';
 // Jika user login & memiliki koneksi AI (BYOK) aktif, backend otomatis memakai kredensial milik user.
 // Jika belum login / belum menautkan BYOK, backend memakai fallback gratis bawaan aplikasi.
 const ENDPOINT = '/api/generate';
-const REQUEST_TIMEOUT_MS = 45_000;
+const REQUEST_TIMEOUT_MS = 65_000;
 
 export class ApiError extends Error {
   status: number;
