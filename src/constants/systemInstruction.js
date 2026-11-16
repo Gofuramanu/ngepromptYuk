@@ -1,17 +1,9 @@
-import type {
-  AnatomyLayerKey,
-  AnatomyLayersMap,
-  BuildGenerationPayloadResult,
-  GenerationPayload,
-  GenerationResponseSchema,
-} from '../types/prompt';
-
 // System instruction & builder payload untuk generasi penuh (6 lapisan) dan regenerasi parsial (1 lapisan).
 
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_CONTEXT_LENGTH = 24000;
 
-export const LAYER_GUIDELINES: Record<AnatomyLayerKey, string> = {
+export const LAYER_GUIDELINES = {
   role: 'Define the exact principal/senior persona, domain specialization, technical mastery, and 3-4 guiding engineering/domain priorities.',
   task: 'State the direct execution deliverable (NEVER write "Create a prompt to..." even if the user says "buatkan prompt..."). Break down into 3-5 numbered concrete workstreams.',
   context:
@@ -41,7 +33,7 @@ Rules:
 - Respond ONLY with a valid JSON object containing exact keys: "role", "task", "context", "reasoning", "stop", "output".`;
 
 // Skema JSON untuk structured output Gemini (responseSchema).
-export const RESPONSE_SCHEMA: GenerationResponseSchema = {
+export const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
     role: { type: 'STRING' },
@@ -55,16 +47,8 @@ export const RESPONSE_SCHEMA: GenerationResponseSchema = {
   propertyOrdering: ['role', 'task', 'context', 'reasoning', 'stop', 'output'],
 };
 
-function isAnatomyLayerKey(key: string): key is AnatomyLayerKey {
-  return Object.hasOwn(LAYER_GUIDELINES, key);
-}
-
-function buildPartialRequest(
-  targetLayer: AnatomyLayerKey,
-  shortPrompt: string,
-  currentLayers: Partial<AnatomyLayersMap> = {}
-): GenerationPayload {
-  const layerKeys = Object.keys(LAYER_GUIDELINES) as AnatomyLayerKey[];
+function buildPartialRequest(targetLayer, shortPrompt, currentLayers = {}) {
+  const layerKeys = Object.keys(LAYER_GUIDELINES);
   const guideline = LAYER_GUIDELINES[targetLayer];
 
   const siblingContext = layerKeys
@@ -98,7 +82,7 @@ Rules:
     `Current "${targetLayer}" draft (produce an improved, fresh version):\n${currentDraft || '(empty)'}`,
   ].join('\n\n');
 
-  const responseSchema: GenerationResponseSchema = {
+  const responseSchema = {
     type: 'OBJECT',
     properties: { [targetLayer]: { type: 'STRING' } },
     required: [targetLayer],
@@ -111,7 +95,7 @@ Rules:
 /**
  * Memvalidasi body request `/api/generate` dan menyusun payload siap kirim ke LLM provider.
  */
-export function buildGenerationPayload(body: Record<string, unknown> | null | undefined): BuildGenerationPayloadResult {
+export function buildGenerationPayload(body) {
   const shortPrompt = typeof body?.shortPrompt === 'string' ? body.shortPrompt.trim() : '';
   const targetLayer = typeof body?.targetLayer === 'string' ? body.targetLayer.trim() : '';
 
@@ -125,15 +109,13 @@ export function buildGenerationPayload(body: Record<string, unknown> | null | un
   }
 
   if (targetLayer) {
-    if (!isAnatomyLayerKey(targetLayer)) {
+    if (!LAYER_GUIDELINES[targetLayer]) {
       return { error: { status: 400, message: `Lapisan anatomi "${targetLayer}" tidak valid.` } };
     }
 
     const currentLayers =
-      body?.currentLayers && typeof body.currentLayers === 'object'
-        ? (body.currentLayers as Partial<AnatomyLayersMap>)
-        : {};
-    const hasAnyLayer = (Object.keys(LAYER_GUIDELINES) as AnatomyLayerKey[]).some((key) => {
+      body?.currentLayers && typeof body.currentLayers === 'object' ? body.currentLayers : {};
+    const hasAnyLayer = Object.keys(LAYER_GUIDELINES).some((key) => {
       const val = currentLayers[key];
       return typeof val === 'string' && val.trim().length > 0;
     });

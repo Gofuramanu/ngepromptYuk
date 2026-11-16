@@ -1,17 +1,8 @@
-import type { AIProviderId, DecryptedUserAIConnection } from '../types/account';
-import type { GenerationPayload } from '../types/prompt';
-
 // Router eksekusi multi-provider untuk kredensial AI milik user (BYOK) maupun fallback aplikasi.
 
 const UPSTREAM_TIMEOUT_MS = 45_000;
 
-export interface ProviderMeta {
-  label: string;
-  defaultModel: string;
-  requiresBaseUrl: boolean;
-}
-
-export const SUPPORTED_PROVIDERS: Record<AIProviderId, ProviderMeta> = {
+export const SUPPORTED_PROVIDERS = {
   gemini: {
     label: 'Google Gemini API',
     defaultModel: 'gemini-2.5-flash',
@@ -39,28 +30,10 @@ export const SUPPORTED_PROVIDERS: Record<AIProviderId, ProviderMeta> = {
   },
 };
 
-interface UpstreamResponseData {
-  choices?: Array<{
-    delta?: { content?: string };
-    message?: { content?: string | Array<string | { text?: string }> };
-    text?: string;
-  }>;
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-  content?: Array<{ text?: string }>;
-  error?: { message?: string };
-}
-
-export function extractOpenAICompatibleContent(rawText: string): {
-  content: string;
-  data: UpstreamResponseData | null;
-} {
-  let data: UpstreamResponseData;
+export function extractOpenAICompatibleContent(rawText) {
+  let data;
   try {
-    data = JSON.parse(rawText) as UpstreamResponseData;
+    data = JSON.parse(rawText);
   } catch {
     if (rawText.includes('data:')) {
       const assembled = rawText
@@ -68,7 +41,7 @@ export function extractOpenAICompatibleContent(rawText: string): {
         .filter((line) => line.startsWith('data:') && !line.includes('[DONE]'))
         .map((line) => {
           try {
-            const chunk = JSON.parse(line.slice(5).trim()) as UpstreamResponseData;
+            const chunk = JSON.parse(line.slice(5).trim());
             const msgContent = chunk?.choices?.[0]?.message?.content;
             return (
               chunk?.choices?.[0]?.delta?.content ??
@@ -105,13 +78,7 @@ export function extractOpenAICompatibleContent(rawText: string): {
   return { content: typeof textFallback === 'string' ? textFallback : '', data };
 }
 
-interface ProviderCallParams {
-  apiKey: string;
-  model: string;
-  payload: GenerationPayload;
-}
-
-async function callGeminiProvider({ apiKey, model, payload }: ProviderCallParams): Promise<string> {
+async function callGeminiProvider({ apiKey, model, payload }) {
   const cleanModel = (model || SUPPORTED_PROVIDERS.gemini.defaultModel)
     .trim()
     .replace(/^models\//, '');
@@ -144,11 +111,7 @@ async function callGeminiProvider({ apiKey, model, payload }: ProviderCallParams
   return content;
 }
 
-async function callAnthropicProvider({
-  apiKey,
-  model,
-  payload,
-}: ProviderCallParams): Promise<string> {
+async function callAnthropicProvider({ apiKey, model, payload }) {
   const cleanModel = (model || SUPPORTED_PROVIDERS.anthropic.defaultModel).trim();
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -175,18 +138,7 @@ async function callAnthropicProvider({
   return content;
 }
 
-interface OpenAICompatibleCallParams extends ProviderCallParams {
-  baseUrl: string;
-  providerLabel: string;
-}
-
-async function callOpenAICompatibleProvider({
-  baseUrl,
-  apiKey,
-  model,
-  payload,
-  providerLabel,
-}: OpenAICompatibleCallParams): Promise<string> {
+async function callOpenAICompatibleProvider({ baseUrl, apiKey, model, payload, providerLabel }) {
   const cleanUrl = baseUrl.trim().replace(/\/+$/, '');
   const res = await fetch(`${cleanUrl}/chat/completions`, {
     method: 'POST',
@@ -214,25 +166,13 @@ async function callOpenAICompatibleProvider({
   return content;
 }
 
-export interface ExecutionResult {
-  content: string;
-  meta: {
-    source: 'user_connection' | 'default_gateway';
-    provider: string;
-    model: string;
-  };
-}
-
 /**
  * Mengeksekusi generate/regenerate menggunakan kredensial milik user (BYOK).
  */
-export async function executeWithUserConnection(
-  connection: DecryptedUserAIConnection,
-  payload: GenerationPayload
-): Promise<ExecutionResult> {
+export async function executeWithUserConnection(connection, payload) {
   const { provider, model, baseUrl, apiKey } = connection;
 
-  let content: string;
+  let content;
   if (provider === 'gemini') {
     content = await callGeminiProvider({ apiKey, model, payload });
   } else if (provider === 'anthropic') {
@@ -285,10 +225,7 @@ export async function executeWithUserConnection(
 /**
  * Fallback ke gateway/model gratis bawaan aplikasi (hanya dipakai jika user belum login / belum set BYOK).
  */
-export async function executeWithDefaultGateway(
-  payload: GenerationPayload,
-  env: Record<string, string | undefined> = process.env
-): Promise<ExecutionResult> {
+export async function executeWithDefaultGateway(payload, env = process.env) {
   const routerUrl = (env.NINEROUTER_BASE_URL || '').trim().replace(/\/+$/, '');
   const routerKey = (env.NINEROUTER_API_KEY || '').trim();
   const routerModel = (env.NINEROUTER_MODEL || 'openrouter/free').trim();

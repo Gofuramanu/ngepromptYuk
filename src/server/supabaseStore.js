@@ -1,44 +1,18 @@
 // Layanan Auth, Penyimpanan Prompt per-User, dan Kredensial AI Terenkripsi (Supabase + Fallback Terenkripsi).
 
 import crypto from 'node:crypto';
-import type {
-  AIProviderId,
-  AuthMode,
-  DecryptedUserAIConnection,
-  SavedPromptItem,
-  UserAIConnectionPublic,
-  UserProfile,
-} from '../types/account';
-import type { AnatomyLayersMap, PromptVariablesMap } from '../types/prompt';
-import { decryptApiKey, encryptApiKey, maskApiKey } from './cryptoVault';
-import { SUPPORTED_PROVIDERS } from './providerRouter';
-
-interface LocalUserRecord extends UserProfile {
-  passwordHash: string;
-}
-
-interface LocalConnectionRecord {
-  userId: string;
-  provider: AIProviderId;
-  model: string;
-  baseUrl: string;
-  encryptedApiKey: string;
-  keyHint: string;
-  isActive: boolean;
-  updatedAt: string;
-}
+import { decryptApiKey, encryptApiKey, maskApiKey } from './cryptoVault.js';
+import { SUPPORTED_PROVIDERS } from './providerRouter.js';
 
 // Fallback in-memory store (digunakan otomatis bila SUPABASE_URL belum diset saat dev/demo)
 const localStore = {
-  usersByEmail: new Map<string, LocalUserRecord>(),
-  usersById: new Map<string, LocalUserRecord>(),
-  promptsByUser: new Map<string, SavedPromptItem[]>(),
-  connectionsByUser: new Map<string, LocalConnectionRecord>(),
+  usersByEmail: new Map(),
+  usersById: new Map(),
+  promptsByUser: new Map(),
+  connectionsByUser: new Map(),
 };
 
-type EnvMap = Record<string, string | undefined>;
-
-function getEncryptionSecret(env: EnvMap = process.env): string {
+function getEncryptionSecret(env = process.env) {
   return (
     env.CREDENTIAL_ENCRYPTION_KEY ||
     env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -47,7 +21,7 @@ function getEncryptionSecret(env: EnvMap = process.env): string {
   ).trim();
 }
 
-function getSupabaseConfig(env: EnvMap = process.env) {
+function getSupabaseConfig(env = process.env) {
   const url = (
     env.SUPABASE_URL ||
     env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -69,7 +43,7 @@ function getSupabaseConfig(env: EnvMap = process.env) {
   };
 }
 
-function createSignedToken(user: UserProfile, secret: string): string {
+function createSignedToken(user, secret) {
   const payload = Buffer.from(
     JSON.stringify({
       sub: user.id,
@@ -81,7 +55,7 @@ function createSignedToken(user: UserProfile, secret: string): string {
   return `local.${payload}.${sig}`;
 }
 
-function verifySignedToken(token: string, secret: string): UserProfile | null {
+function verifySignedToken(token, secret) {
   if (typeof token !== 'string' || !token.startsWith('local.')) return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
@@ -89,11 +63,7 @@ function verifySignedToken(token: string, secret: string): UserProfile | null {
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   if (sig !== expected) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
-      sub?: string;
-      email?: string;
-      exp?: number;
-    };
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!parsed?.sub || !parsed?.email || (parsed.exp ?? 0) < Date.now()) return null;
     return { id: parsed.sub, email: parsed.email };
   } catch {
@@ -101,9 +71,7 @@ function verifySignedToken(token: string, secret: string): UserProfile | null {
   }
 }
 
-export function extractBearerToken(req?: {
-  headers?: Record<string, string | string[] | undefined>;
-}): string {
+export function extractBearerToken(req) {
   const rawHeader = req?.headers?.authorization || req?.headers?.Authorization || '';
   const authHeader = Array.isArray(rawHeader) ? rawHeader[0] || '' : rawHeader;
   if (typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
@@ -115,10 +83,7 @@ export function extractBearerToken(req?: {
 /**
  * Verifikasi token sesi user (Supabase JWT atau Local Signed Token).
  */
-export async function resolveAuthenticatedUser(
-  token: string,
-  env: EnvMap = process.env
-): Promise<UserProfile | null> {
+export async function resolveAuthenticatedUser(token, env = process.env) {
   if (!token) return null;
   const supa = getSupabaseConfig(env);
 
@@ -130,7 +95,7 @@ export async function resolveAuthenticatedUser(
       },
     });
     if (!res.ok) return null;
-    const user = (await res.json().catch(() => null)) as { id?: string; email?: string } | null;
+    const user = await res.json().catch(() => null);
     return user?.id && user?.email ? { id: user.id, email: user.email } : null;
   }
 
@@ -140,14 +105,7 @@ export async function resolveAuthenticatedUser(
 /**
  * Registrasi atau Login user via email & password.
  */
-export async function authenticateUser(
-  { mode, email, password }: { mode: AuthMode; email?: unknown; password?: unknown },
-  env: EnvMap = process.env
-): Promise<{
-  user: UserProfile;
-  accessToken: string;
-  storageMode: 'supabase' | 'encrypted_vault';
-}> {
+export async function authenticateUser({ mode, email, password }, env = process.env) {
   const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   const cleanPassword = typeof password === 'string' ? password : '';
 
@@ -175,16 +133,7 @@ export async function authenticateUser(
       body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
     });
 
-    const data = (await res.json().catch(() => null)) as {
-      user?: { id: string; email: string };
-      id?: string;
-      email?: string;
-      access_token?: string;
-      session?: { access_token?: string };
-      msg?: string;
-      error_description?: string;
-      error?: string;
-    } | null;
+    const data = await res.json().catch(() => null);
 
     if (!res.ok) {
       throw new Error(
@@ -226,7 +175,7 @@ export async function authenticateUser(
     }
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.scryptSync(cleanPassword, salt, 64).toString('hex');
-    const newUser: LocalUserRecord = {
+    const newUser = {
       id: crypto.randomUUID(),
       email: cleanEmail,
       passwordHash: `${salt}:${hash}`,
@@ -256,24 +205,10 @@ export async function authenticateUser(
   };
 }
 
-interface SupabaseConnectionRow {
-  provider: AIProviderId;
-  model: string;
-  base_url?: string | null;
-  key_hint: string;
-  encrypted_api_key?: string;
-  is_active: boolean;
-  updated_at?: string;
-}
-
 /**
  * Mengambil metadata koneksi AI milik user (tanpa pernah mengirim raw API key ke browser).
  */
-export async function getUserConnectionPublic(
-  user: UserProfile,
-  token: string,
-  env: EnvMap = process.env
-): Promise<UserAIConnectionPublic | null> {
+export async function getUserConnectionPublic(user, token, env = process.env) {
   const supa = getSupabaseConfig(env);
 
   if (supa.isConfigured && !token.startsWith('local.')) {
@@ -287,7 +222,7 @@ export async function getUserConnectionPublic(
       }
     );
     if (!res.ok) return null;
-    const rows = (await res.json().catch(() => [])) as SupabaseConnectionRow[];
+    const rows = await res.json().catch(() => []);
     const row = rows?.[0];
     if (!row) return null;
     return {
@@ -315,10 +250,7 @@ export async function getUserConnectionPublic(
 /**
  * Mengambil dan mendekripsi kredensial AI milik user di sisi server untuk eksekusi /api/generate.
  */
-export async function getDecryptedUserConnection(
-  token: string,
-  env: EnvMap = process.env
-): Promise<DecryptedUserAIConnection | null> {
+export async function getDecryptedUserConnection(token, env = process.env) {
   const user = await resolveAuthenticatedUser(token, env);
   if (!user) return null;
 
@@ -336,7 +268,7 @@ export async function getDecryptedUserConnection(
       }
     );
     if (!res.ok) return null;
-    const rows = (await res.json().catch(() => [])) as SupabaseConnectionRow[];
+    const rows = await res.json().catch(() => []);
     const row = rows?.[0];
     if (!row || !row.is_active || !row.encrypted_api_key) return null;
 
@@ -361,24 +293,14 @@ export async function getDecryptedUserConnection(
   };
 }
 
-function isSupportedProvider(provider: string): provider is AIProviderId {
-  return Object.hasOwn(SUPPORTED_PROVIDERS, provider);
-}
-
 /**
  * Menyimpan/memperbarui koneksi AI milik user dengan enkripsi AES-256-GCM.
  */
-export async function saveUserConnection(
-  user: UserProfile,
-  token: string,
-  input: Record<string, unknown> | null | undefined,
-  env: EnvMap = process.env
-): Promise<UserAIConnectionPublic | null> {
-  const providerRaw = typeof input?.provider === 'string' ? input.provider.trim() : '';
-  if (!isSupportedProvider(providerRaw)) {
-    throw new Error(`Provider "${providerRaw}" tidak didukung.`);
+export async function saveUserConnection(user, token, input, env = process.env) {
+  const provider = typeof input?.provider === 'string' ? input.provider.trim() : '';
+  if (!SUPPORTED_PROVIDERS[provider]) {
+    throw new Error(`Provider "${provider}" tidak didukung.`);
   }
-  const provider: AIProviderId = providerRaw;
 
   const model =
     (typeof input?.model === 'string' ? input.model.trim() : '') ||
@@ -395,8 +317,8 @@ export async function saveUserConnection(
   const supa = getSupabaseConfig(env);
 
   if (supa.isConfigured && !token.startsWith('local.')) {
-    let encryptedApiKey: string;
-    let keyHint: string;
+    let encryptedApiKey;
+    let keyHint;
 
     if (rawApiKey) {
       encryptedApiKey = encryptApiKey(rawApiKey, secret);
@@ -411,7 +333,7 @@ export async function saveUserConnection(
           },
         }
       );
-      const existingRows = (await existingRes.json().catch(() => [])) as SupabaseConnectionRow[];
+      const existingRows = await existingRes.json().catch(() => []);
       const existing = existingRows?.[0];
       if (!existing?.encrypted_api_key) {
         throw new Error('API Key wajib diisi untuk koneksi baru.');
@@ -442,7 +364,7 @@ export async function saveUserConnection(
       }
     );
 
-    const rows = (await upsertRes.json().catch(() => null)) as { message?: string } | null;
+    const rows = await upsertRes.json().catch(() => null);
     if (!upsertRes.ok) {
       throw new Error(rows?.message || 'Gagal menyimpan kredensial AI ke Supabase.');
     }
@@ -458,10 +380,10 @@ export async function saveUserConnection(
 
   const encryptedApiKey = rawApiKey
     ? encryptApiKey(rawApiKey, secret)
-    : existing!.encryptedApiKey;
-  const keyHint = rawApiKey ? maskApiKey(rawApiKey) : existing!.keyHint;
+    : existing.encryptedApiKey;
+  const keyHint = rawApiKey ? maskApiKey(rawApiKey) : existing.keyHint;
 
-  const nextRecord: LocalConnectionRecord = {
+  const nextRecord = {
     userId: user.id,
     provider,
     model,
@@ -475,11 +397,7 @@ export async function saveUserConnection(
   return getUserConnectionPublic(user, token, env);
 }
 
-export async function deleteUserConnection(
-  user: UserProfile,
-  token: string,
-  env: EnvMap = process.env
-): Promise<boolean> {
+export async function deleteUserConnection(user, token, env = process.env) {
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
     await fetch(
@@ -499,23 +417,10 @@ export async function deleteUserConnection(
   return true;
 }
 
-interface SupabasePromptRow {
-  id: string;
-  title: string;
-  short_prompt?: string | null;
-  layers?: Partial<AnatomyLayersMap> | null;
-  variables?: PromptVariablesMap | null;
-  updated_at?: string;
-}
-
 /**
  * Daftar, simpan, dan hapus Master Prompt pada ruang kerja per-user.
  */
-export async function listUserPrompts(
-  user: UserProfile,
-  token: string,
-  env: EnvMap = process.env
-): Promise<SavedPromptItem[]> {
+export async function listUserPrompts(user, token, env = process.env) {
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
     const res = await fetch(
@@ -528,7 +433,7 @@ export async function listUserPrompts(
       }
     );
     if (!res.ok) return [];
-    const rows = (await res.json().catch(() => [])) as SupabasePromptRow[];
+    const rows = await res.json().catch(() => []);
     return Array.isArray(rows)
       ? rows.map((r) => ({
           id: r.id,
@@ -544,23 +449,12 @@ export async function listUserPrompts(
   return localStore.promptsByUser.get(user.id) || [];
 }
 
-export async function saveUserPrompt(
-  user: UserProfile,
-  token: string,
-  input: Record<string, unknown> | null | undefined,
-  env: EnvMap = process.env
-): Promise<SavedPromptItem[]> {
+export async function saveUserPrompt(user, token, input, env = process.env) {
   const title =
     (typeof input?.title === 'string' ? input.title.trim() : '') || 'Untitled Master Prompt';
   const shortPrompt = typeof input?.shortPrompt === 'string' ? input.shortPrompt : '';
-  const layers =
-    input?.layers && typeof input.layers === 'object'
-      ? (input.layers as Partial<AnatomyLayersMap>)
-      : {};
-  const variables =
-    input?.variables && typeof input.variables === 'object'
-      ? (input.variables as PromptVariablesMap)
-      : {};
+  const layers = input?.layers && typeof input.layers === 'object' ? input.layers : {};
+  const variables = input?.variables && typeof input.variables === 'object' ? input.variables : {};
 
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
@@ -581,7 +475,7 @@ export async function saveUserPrompt(
       }),
     });
 
-    const rows = (await res.json().catch(() => null)) as { message?: string } | null;
+    const rows = await res.json().catch(() => null);
     if (!res.ok) {
       throw new Error(rows?.message || 'Gagal menyimpan prompt ke database.');
     }
@@ -589,7 +483,7 @@ export async function saveUserPrompt(
   }
 
   const current = localStore.promptsByUser.get(user.id) || [];
-  const nextItem: SavedPromptItem = {
+  const nextItem = {
     id: crypto.randomUUID(),
     title: title.slice(0, 140),
     shortPrompt,
@@ -602,12 +496,7 @@ export async function saveUserPrompt(
   return updated;
 }
 
-export async function deleteUserPrompt(
-  user: UserProfile,
-  token: string,
-  promptId: string,
-  env: EnvMap = process.env
-): Promise<SavedPromptItem[]> {
+export async function deleteUserPrompt(user, token, promptId, env = process.env) {
   const supa = getSupabaseConfig(env);
   if (supa.isConfigured && !token.startsWith('local.')) {
     await fetch(

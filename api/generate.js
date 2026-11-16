@@ -3,21 +3,16 @@
 // 1. Jika user login & memiliki koneksi AI aktif (BYOK) -> dekripsi API Key milik user di server & panggil provider pilihan user.
 // 2. Jika belum login / belum menautkan BYOK -> fallback ke gateway/model gratis bawaan aplikasi.
 
-import { buildGenerationPayload } from '../src/constants/systemInstruction';
+import { buildGenerationPayload } from '../src/constants/systemInstruction.js';
 import {
   executeWithDefaultGateway,
   executeWithUserConnection,
-} from '../src/server/providerRouter';
-import { extractBearerToken, getDecryptedUserConnection } from '../src/server/supabaseStore';
-import type { ServerlessRequest, ServerlessResponse } from './account';
+} from '../src/server/providerRouter.js';
+import { extractBearerToken, getDecryptedUserConnection } from '../src/server/supabaseStore.js';
 
-export async function processGenerateRequest(
-  body: Record<string, unknown> | null | undefined,
-  token: string,
-  env: Record<string, string | undefined> = process.env
-): Promise<{ status: number; data: Record<string, unknown> }> {
+export async function processGenerateRequest(body, token, env = process.env) {
   const payload = buildGenerationPayload(body);
-  if ('error' in payload) {
+  if (payload.error) {
     return {
       status: payload.error.status,
       data: { error: { message: payload.error.message } },
@@ -49,24 +44,24 @@ export async function processGenerateRequest(
   };
 }
 
-async function parseRequestBody(req: ServerlessRequest): Promise<Record<string, unknown>> {
+async function parseRequestBody(req) {
   if (req.body && typeof req.body === 'object') {
-    return req.body as Record<string, unknown>;
+    return req.body;
   }
   if (typeof req.body === 'string') {
     try {
-      return JSON.parse(req.body) as Record<string, unknown>;
+      return JSON.parse(req.body);
     } catch {
       return {};
     }
   }
   return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => {
       try {
         const text = Buffer.concat(chunks).toString('utf8');
-        resolve(text ? (JSON.parse(text) as Record<string, unknown>) : {});
+        resolve(text ? JSON.parse(text) : {});
       } catch {
         resolve({});
       }
@@ -75,7 +70,7 @@ async function parseRequestBody(req: ServerlessRequest): Promise<Record<string, 
   });
 }
 
-function sendJson(res: ServerlessResponse, statusCode: number, data: unknown): void {
+function sendJson(res, statusCode, data) {
   if (typeof res.status === 'function' && typeof res.json === 'function') {
     res.status(statusCode).json(data);
   } else {
@@ -85,10 +80,7 @@ function sendJson(res: ServerlessResponse, statusCode: number, data: unknown): v
   }
 }
 
-export default async function handler(
-  req: ServerlessRequest,
-  res: ServerlessResponse
-): Promise<void> {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     sendJson(res, 405, { error: { message: 'Method not allowed. Gunakan POST.' } });
@@ -101,15 +93,14 @@ export default async function handler(
     const result = await processGenerateRequest(body, token, process.env);
     sendJson(res, result.status, result.data);
   } catch (err) {
-    const error = err as Error;
-    if (error.name === 'TimeoutError') {
+    if (err?.name === 'TimeoutError') {
       sendJson(res, 504, {
         error: { message: 'Permintaan ke provider AI melebihi batas waktu.' },
       });
       return;
     }
     sendJson(res, 502, {
-      error: { message: error.message || 'Gagal menghubungi provider AI.' },
+      error: { message: err?.message || 'Gagal menghubungi provider AI.' },
     });
   }
 }

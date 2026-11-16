@@ -2,9 +2,9 @@ import dns from 'node:dns';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import react from '@vitejs/plugin-react';
 import { type Plugin, defineConfig, loadEnv } from 'vite';
-import { handleAccountAction } from './api/account';
-import { processGenerateRequest } from './api/generate';
-import { extractBearerToken } from './src/server/supabaseStore';
+import { handleAccountAction } from './api/account.js';
+import { processGenerateRequest } from './api/generate.js';
+import { extractBearerToken } from './src/server/supabaseStore.js';
 
 // Supresi peringatan masa depan Vite 8 terkait native configLoader
 process.env.VITE_CONFIG_NATIVE_IGNORE_WARNING = 'true';
