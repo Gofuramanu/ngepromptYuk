@@ -32,7 +32,12 @@ export async function handleAccountAction(
 
   if (action === 'oauth_url') {
     const provider = body?.provider === 'github' ? 'github' : 'google';
-    const supaUrl = (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+    const supaUrl = (
+      env.SUPABASE_URL ||
+      env.NEXT_PUBLIC_SUPABASE_URL ||
+      env.VITE_SUPABASE_URL ||
+      ''
+    ).trim().replace(/\/+$/, '');
     const redirectTo = typeof body?.redirectTo === 'string' ? body.redirectTo.trim() : '';
     if (!supaUrl) {
       return {

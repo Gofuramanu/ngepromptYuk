@@ -48,8 +48,20 @@ function getEncryptionSecret(env: EnvMap = process.env): string {
 }
 
 function getSupabaseConfig(env: EnvMap = process.env) {
-  const url = (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
-  const anonKey = (env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || '').trim();
+  const url = (
+    env.SUPABASE_URL ||
+    env.NEXT_PUBLIC_SUPABASE_URL ||
+    env.VITE_SUPABASE_URL ||
+    ''
+  ).trim().replace(/\/+$/, '');
+  const anonKey = (
+    env.SUPABASE_ANON_KEY ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    env.SUPABASE_PUBLISHABLE_KEY ||
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
   return {
     url,
     anonKey,
