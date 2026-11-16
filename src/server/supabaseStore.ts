@@ -8,10 +8,10 @@ import type {
   SavedPromptItem,
   UserAIConnectionPublic,
   UserProfile,
-} from '../types/account.ts';
-import type { AnatomyLayersMap, PromptVariablesMap } from '../types/prompt.ts';
-import { decryptApiKey, encryptApiKey, maskApiKey } from './cryptoVault.ts';
-import { SUPPORTED_PROVIDERS } from './providerRouter.ts';
+} from '../types/account';
+import type { AnatomyLayersMap, PromptVariablesMap } from '../types/prompt';
+import { decryptApiKey, encryptApiKey, maskApiKey } from './cryptoVault';
+import { SUPPORTED_PROVIDERS } from './providerRouter';
 
 interface LocalUserRecord extends UserProfile {
   passwordHash: string;

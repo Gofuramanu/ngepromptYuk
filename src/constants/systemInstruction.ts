@@ -4,7 +4,7 @@ import type {
   BuildGenerationPayloadResult,
   GenerationPayload,
   GenerationResponseSchema,
-} from '../types/prompt.ts';
+} from '../types/prompt';
 
 // System instruction & builder payload untuk generasi penuh (6 lapisan) dan regenerasi parsial (1 lapisan).
 

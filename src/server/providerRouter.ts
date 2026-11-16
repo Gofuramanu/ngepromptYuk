@@ -1,5 +1,5 @@
-import type { AIProviderId, DecryptedUserAIConnection } from '../types/account.ts';
-import type { GenerationPayload } from '../types/prompt.ts';
+import type { AIProviderId, DecryptedUserAIConnection } from '../types/account';
+import type { GenerationPayload } from '../types/prompt';
 
 // Router eksekusi multi-provider untuk kredensial AI milik user (BYOK) maupun fallback aplikasi.
 

@@ -12,7 +12,7 @@ import {
   resolveAuthenticatedUser,
   saveUserConnection,
   saveUserPrompt,
-} from '../src/server/supabaseStore.ts';
+} from '../src/server/supabaseStore';
 
 export interface ServerlessRequest extends IncomingMessage {
   body?: Record<string, unknown>;
@@ -133,22 +133,59 @@ export async function handleAccountAction(
   };
 }
 
+async function parseRequestBody(req: ServerlessRequest): Promise<Record<string, unknown>> {
+  if (req.body && typeof req.body === 'object') {
+    return req.body as Record<string, unknown>;
+  }
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const text = Buffer.concat(chunks).toString('utf8');
+        resolve(text ? (JSON.parse(text) as Record<string, unknown>) : {});
+      } catch {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
+function sendJson(res: ServerlessResponse, statusCode: number, data: unknown): void {
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
+    res.status(statusCode).json(data);
+  } else {
+    res.statusCode = statusCode;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(data));
+  }
+}
+
 export default async function handler(
   req: ServerlessRequest,
   res: ServerlessResponse
 ): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    res.status(405).json({ error: { message: 'Method not allowed. Gunakan POST.' } });
+    sendJson(res, 405, { error: { message: 'Method not allowed. Gunakan POST.' } });
     return;
   }
 
   try {
     const token = extractBearerToken(req);
-    const result = await handleAccountAction(req.body || {}, token, process.env);
-    res.status(result.status).json(result.data);
+    const body = await parseRequestBody(req);
+    const result = await handleAccountAction(body, token, process.env);
+    sendJson(res, result.status, result.data);
   } catch (err) {
-    res.status(400).json({
+    sendJson(res, 400, {
       error: { message: (err as Error).message || 'Gagal memproses permintaan akun.' },
     });
   }
